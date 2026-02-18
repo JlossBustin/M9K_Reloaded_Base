@@ -13,14 +13,4 @@ if not ConVarExists("cl_tfa_rms_default_scotchmuzzleflash") then
 		"Enable white flash sprites")
 end
 
--- Print status on load
-timer.Simple(0.15, function()
-	local scotch = GetConVar("cl_tfa_rms_default_scotchmuzzleflash")
-	if scotch and scotch:GetBool() then
-		print("[M9K:R] Scotch muzzle flash sprites: ENABLED")
-	else
-		print("[M9K:R] Scotch muzzle flash sprites: DISABLED")
-	end
-end)
-
-print("[M9K:R] Scotch muzzle flash sprite system loaded (cl_tfa_rms_default_scotchmuzzleflash)")
+print("[M9K:R] Scotch muzzle flash system loaded")

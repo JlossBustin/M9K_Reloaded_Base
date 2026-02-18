@@ -659,11 +659,4 @@ if SWEP then
 	end
 end
 
-print("[M9K:R] Centralized HUD system loaded (CLIENT)")
-print("[M9K:R] - HUD Mode: m9kr_hud_mode (0 = GMod Default, 1 = Custom M9KR)")
-print("[M9K:R] - Custom HUD: Weapon name, fire mode, caliber, ammo, reserve, health, armor, squad")
-print("[M9K:R] - Health color: Green (100%) -> Red (0%)")
-print("[M9K:R] - Armor color: Cyan (100%) -> Blue (0%)")
-print("[M9K:R] - Squad tracking: Icon-based display with death fade animations")
-print("[M9K:R] - Fades when idle (tracks keyboard + mouse movement)")
-print("[M9K:R] - Default HUD mode includes chambered round in clip count")
+print("[M9K:R] HUD system loaded")

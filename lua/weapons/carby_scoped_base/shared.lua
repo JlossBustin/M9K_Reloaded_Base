@@ -328,11 +328,6 @@ function SWEP:Deploy()
 		-- First time deploying this weapon
 		self.FirstDeployDone = true
 
-		if CLIENT then
-			print("[M9KR SCOPED DEPLOY DEBUG] First deploy for " .. self:GetClass())
-			print("  Silenced: " .. tostring(self.Silenced))
-		end
-
 		local drawAnim = ACT_VM_DRAW
 		local vm = self.Owner:GetViewModel()
 
@@ -341,36 +336,16 @@ function SWEP:Deploy()
 			if self.Silenced then
 				-- For suppressed weapons, try ACT_VM_DRAW_EMPTY
 				local emptySeq = vm:SelectWeightedSequence(ACT_VM_DRAW_EMPTY)
-				if CLIENT then
-					print("  ACT_VM_DRAW_EMPTY sequence: " .. tostring(emptySeq))
-				end
 				if emptySeq and emptySeq > -1 then
 					vm:SendViewModelMatchingSequence(emptySeq)
-					drawAnim = nil  -- Don't send anim again
-					if CLIENT then
-						print("  -> Playing ACT_VM_DRAW_EMPTY")
-					end
-				else
-					if CLIENT then
-						print("  -> ACT_VM_DRAW_EMPTY not found, falling back to ACT_VM_DRAW")
-					end
+					drawAnim = nil
 				end
 			else
 				-- For regular weapons, try ACT_VM_DRAW_DEPLOYED
 				local deploySeq = vm:SelectWeightedSequence(ACT_VM_DRAW_DEPLOYED)
-				if CLIENT then
-					print("  ACT_VM_DRAW_DEPLOYED sequence: " .. tostring(deploySeq))
-				end
 				if deploySeq and deploySeq > -1 then
 					vm:SendViewModelMatchingSequence(deploySeq)
-					drawAnim = nil  -- Don't send anim again
-					if CLIENT then
-						print("  -> Playing ACT_VM_DRAW_DEPLOYED")
-					end
-				else
-					if CLIENT then
-						print("  -> ACT_VM_DRAW_DEPLOYED not found, falling back to ACT_VM_DRAW")
-					end
+					drawAnim = nil
 				end
 			end
 		end
@@ -378,9 +353,6 @@ function SWEP:Deploy()
 		-- Only send weapon anim if we didn't already send a sequence
 		if drawAnim then
 			self.Weapon:SendWeaponAnim(drawAnim)
-			if CLIENT then
-				print("  -> Sending fallback anim: ACT_VM_DRAW")
-			end
 		end
 	else
 		-- Subsequent deploys use standard draw animation

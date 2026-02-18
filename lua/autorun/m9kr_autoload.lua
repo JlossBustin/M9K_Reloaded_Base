@@ -18,10 +18,7 @@ print("[M9K:R] Loading M9K Reloaded systems...")
 
 if CLIENT then
 	game.AddParticles("particles/realistic_muzzleflashes_2.pcf")
-	print("[M9K:R] Loaded realistic_muzzleflashes_2.pcf (284 KB, hardware-accelerated)")
-
 	game.AddParticles("particles/tfa_ballistics.pcf")
-	print("[M9K:R] Loaded tfa_ballistics.pcf (bullet impact particles)")
 end
 
 if SERVER then
@@ -46,8 +43,6 @@ PrecacheParticleSystem("muzzleflash_minimi")
 PrecacheParticleSystem("muzzleflash_vollmer_optimized")
 PrecacheParticleSystem("muzzleflash_suppressed")
 PrecacheParticleSystem("muzzleflash_suppressed_optimized")
-
-print("[M9K:R] Precached TFA Realistic 2.0 particle systems")
 
 -- ============================================================================
 -- Server ConVars (replicated to clients, only server can change)

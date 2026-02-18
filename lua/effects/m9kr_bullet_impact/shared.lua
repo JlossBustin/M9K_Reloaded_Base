@@ -15,12 +15,6 @@ function EFFECT:Init(data)
 		return
 	end
 
-	-- Debug
-	local debugCvar = GetConVar("m9kr_debug_impacts")
-	if debugCvar and debugCvar:GetBool() then
-		print("[M9K:R] m9kr_bullet_impact effect Init() called at " .. tostring(data:GetOrigin()))
-	end
-
 	-- M9K custom bullet impact
 	-- Get caliber data for scaling (default to rifle caliber: 14)
 	local penetration = data:GetMagnitude() or 14
@@ -30,12 +24,7 @@ function EFFECT:Init(data)
 	local normal = data:GetNormal()
 	local emitter = ParticleEmitter(posoffset)
 
-	if not emitter then
-		if debugCvar and debugCvar:GetBool() then
-			print("[M9K:R] m9kr_bullet_impact: ParticleEmitter failed!")
-		end
-		return
-	end
+	if not emitter then return end
 
 	-- Scale particle count based on caliber
 	local particleCount = math.floor(6 * caliberScale)
@@ -62,14 +51,6 @@ function EFFECT:Init(data)
 			particle:SetRollDelta(math.Rand(-0.05, 0.05))
 			particle:SetColor(200, 200, 200)
 			particle:SetLighting(true)  -- Enable environmental lighting
-
-			if debugCvar and debugCvar:GetBool() and i == 0 then
-				print("[M9K:R] Particle spawned at " .. tostring(posoffset))
-			end
-		else
-			if debugCvar and debugCvar:GetBool() then
-				print("[M9K:R] Failed to add particle " .. i)
-			end
 		end
 	end
 

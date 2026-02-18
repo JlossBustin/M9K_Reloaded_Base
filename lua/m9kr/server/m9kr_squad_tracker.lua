@@ -87,7 +87,4 @@ timer.Create("M9KR_UpdateSquadCounts", 0.5, 0, function()
 	end
 end)
 
-print("[M9K:R] Squad tracker loaded (SERVER)")
-print("[M9K:R] - Tracks NPCs in 'player_squad' by type using ai.GetSquadMembers()")
-print("[M9K:R] - Updates every 0.5 seconds")
-print("[M9K:R] - Networks data to clients via NWString (JSON)")
+print("[M9K:R] Squad tracker loaded")

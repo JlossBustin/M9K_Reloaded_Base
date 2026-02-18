@@ -728,17 +728,6 @@ function SWEP:HasSequence(activityID)
 	local seqID = vm:SelectWeightedSequence(activityID)
 	local hasSeq = seqID and seqID > 0 and seqID ~= -1
 	
-	-- Debug: List all sequences on first call
-	/*if not self.SequencesListed then
-		self.SequencesListed = true
-		print("[M9K DEBUG] Listing all sequences on viewmodel:")
-		for i = 0, vm:GetSequenceCount() - 1 do
-			local seqName = vm:GetSequenceName(i)
-			local activity = vm:GetSequenceActivity(i)
-			print(string.format("  Seq %d: %s (activity %d)", i, seqName, activity))
-		end
-	end*/
-	
 	return hasSeq
 end
 
@@ -1580,25 +1569,6 @@ function SWEP:BulletPenetrate(bouncenum, attacker, tr, paininfo)
 	if M9KR and M9KR.Penetration and M9KR.Penetration.CalculatePenetration then
 		local ok, penResult = pcall(M9KR.Penetration.CalculatePenetration, self, bouncenum, attacker, tr, paininfo)
 		if not ok then
-			-- Print debugging info and avoid crashing
-			print("[M9K:R] Penetration router error:", penResult)
-			-- Provide context for debugging
-			if SERVER then
-				print("  Weapon class:", tostring(self and (self.Gun or (IsValid(self) and self:GetClass()) ) or "<nil>"))
-				if IsValid(attacker) then
-					print("  Attacker class:", tostring(attacker:GetClass()))
-				else
-					print("  Attacker: <invalid or nil>")
-				end
-				if tr then
-					if tr.HitPos then print("  tr.HitPos:", tostring(tr.HitPos)) end
-					if tr.HitNormal then print("  tr.HitNormal:", tostring(tr.HitNormal)) end
-					if tr.MatType then print("  tr.MatType:", tostring(tr.MatType)) end
-					if tr.Entity and IsValid(tr.Entity) then print("  tr.Entity:", tostring(tr.Entity:GetClass())) end
-				else
-					print("  tr: <nil>")
-				end
-			end
 			res = false
 		else
 			res = penResult

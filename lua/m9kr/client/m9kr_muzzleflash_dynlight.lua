@@ -13,14 +13,4 @@ if not ConVarExists("cl_tfa_rms_muzzleflash_dynlight") then
 		"Enable dynamic lighting from muzzle flashes")
 end
 
--- Print status on load
-timer.Simple(0.15, function()
-	local dynlight = GetConVar("cl_tfa_rms_muzzleflash_dynlight")
-	if dynlight and dynlight:GetBool() then
-		print("[M9K:R] Muzzle flash dynamic lighting: ENABLED")
-	else
-		print("[M9K:R] Muzzle flash dynamic lighting: DISABLED")
-	end
-end)
-
-print("[M9K:R] Muzzle flash dynamic lighting system loaded (cl_tfa_rms_muzzleflash_dynlight)")
+print("[M9K:R] Muzzle flash dynamic lighting loaded")

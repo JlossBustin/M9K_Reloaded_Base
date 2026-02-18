@@ -60,30 +60,15 @@ function M9KR.Particles.Initialize()
 	}
 
 	for _, matPath in ipairs(materials) do
-		local mat = Material(matPath)
-		if mat:IsError() then
-			print("[M9K:R WARNING] Material not found: " .. matPath)
-		else
-			print("[M9K:R] Precached material: " .. matPath)
-		end
+		Material(matPath)
 	end
 
 	-- Load each PCF file AFTER materials are loaded
 	for _, pcfFile in ipairs(M9KR.Particles.PCFFiles) do
 		if not addedPCF[pcfFile] then
 			local pcfPath = "particles/" .. pcfFile .. ".pcf"
-			print("[M9K:R] Attempting to load particle file: " .. pcfPath)
-
-			local success = pcall(function()
-				game.AddParticles(pcfPath)
-			end)
-
-			if success then
-				addedPCF[pcfFile] = true
-				print("[M9K:R] Successfully loaded particle file: " .. pcfFile .. ".pcf")
-			else
-				print("[M9K:R ERROR] Failed to load particle file: " .. pcfFile .. ".pcf")
-			end
+			game.AddParticles(pcfPath)
+			addedPCF[pcfFile] = true
 		end
 	end
 
@@ -92,7 +77,6 @@ function M9KR.Particles.Initialize()
 		if not cachedParticles[particleName] then
 			PrecacheParticleSystem(particleName)
 			cachedParticles[particleName] = true
-			print("[M9K:R] Precached particle: " .. particleName)
 		end
 	end
 
@@ -124,10 +108,7 @@ function M9KR.Particles.Initialize()
 
 	for _, particleName in ipairs(tfaParticles) do
 		PrecacheParticleSystem(particleName)
-		print("[M9K:R] Precached TFA particle: " .. particleName)
 	end
-
-	print("[M9K:R] Particle systems initialized successfully")
 end
 
 -- Initialize when the game loads
@@ -319,14 +300,4 @@ function M9KR.Particles.FollowMuzzle(self, first)
 	end
 end
 
--- Print particle optimization status on load
-timer.Simple(0.2, function()
-	local optimized = GetConVar("cl_tfa_rms_optimized_smoke")
-	if optimized and optimized:GetBool() then
-		print("[M9K:R] TFA Realistic 2.0 optimized particles: ENABLED (30-40% fewer particles)")
-	else
-		print("[M9K:R] TFA Realistic 2.0 optimized particles: DISABLED (standard quality)")
-	end
-end)
-
-print("[M9K:R] Particle following system loaded")
+print("[M9K:R] Particle system loaded")

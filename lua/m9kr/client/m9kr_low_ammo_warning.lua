@@ -192,5 +192,4 @@ for ammoType, soundPath in pairs(LastAmmoSoundByAmmoType) do
 	util.PrecacheSound(soundPath)
 end
 
-print("[M9K:R] Client-side low ammo warning system loaded")
-print("[M9K:R] - Precached " .. table.Count(LowAmmoSoundByAmmoType) .. " low ammo sounds and " .. table.Count(LastAmmoSoundByAmmoType) .. " last ammo sounds")
+print("[M9K:R] Low ammo warning system loaded")
