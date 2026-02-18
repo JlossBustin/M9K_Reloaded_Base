@@ -9,7 +9,7 @@
 ]]--
 
 M9KR = M9KR or {}
-M9KR.Ballistics = {}
+M9KR.Ballistics = M9KR.Ballistics or {}
 
 --[[
 	Ballistics Database Structure:

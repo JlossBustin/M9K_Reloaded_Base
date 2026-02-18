@@ -11,7 +11,7 @@
 ]]--
 
 M9KR = M9KR or {}
-M9KR.Tracers = {}
+M9KR.Tracers = M9KR.Tracers or {}
 
 -- Create ConVar for tracer mode (server-only)
 if SERVER then

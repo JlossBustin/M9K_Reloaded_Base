@@ -22,7 +22,7 @@
 ]]--
 
 M9KR = M9KR or {}
-M9KR.WeaponState = {}
+M9KR.WeaponState = M9KR.WeaponState or {}
 
 -- State tracking per weapon entity
 local weaponStates = {}

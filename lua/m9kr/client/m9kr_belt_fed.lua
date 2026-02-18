@@ -27,12 +27,12 @@
 M9KR = M9KR or {}
 M9KR.BeltFed = M9KR.BeltFed or {}
 M9KR.BeltFed.Disabled = false
-M9KR.BeltFed.ReloadStartTime = {}  -- Track reload start time per weapon
-M9KR.BeltFed.ReloadWasEmpty = {}   -- Track if reload started with empty clip
-M9KR.BeltFed.BoneCache = {}  -- Cache bone indices per weapon class
+M9KR.BeltFed.ReloadStartTime = M9KR.BeltFed.ReloadStartTime or {}  -- Track reload start time per weapon
+M9KR.BeltFed.ReloadWasEmpty = M9KR.BeltFed.ReloadWasEmpty or {}   -- Track if reload started with empty clip
+M9KR.BeltFed.BoneCache = M9KR.BeltFed.BoneCache or {}  -- Cache bone indices per weapon class
 M9KR.BeltFed.LastWeaponClass = nil    -- Track last active weapon CLASS to detect swaps
 M9KR.BeltFed.LastViewModelModel = nil  -- Track viewmodel's actual model path
-M9KR.BeltFed.ManipulatedBones = {} -- Track bone IDs we've manipulated for cleanup
+M9KR.BeltFed.ManipulatedBones = M9KR.BeltFed.ManipulatedBones or {} -- Track bone IDs we've manipulated for cleanup
 M9KR.BeltFed.NeedsBoneReset = false -- Flag to trigger bone reset in PreDrawViewModel
 
 --[[

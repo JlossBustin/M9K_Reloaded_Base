@@ -126,8 +126,8 @@ M9KR.Particles.Initialize()
 
 local vector_origin = Vector()
 
-M9KR.Particles.FlareParts = {}
-M9KR.Particles.VMAttachments = {}
+M9KR.Particles.FlareParts = M9KR.Particles.FlareParts or {}
+M9KR.Particles.VMAttachments = M9KR.Particles.VMAttachments or {}
 
 local VMAttachments = M9KR.Particles.VMAttachments
 local FlareParts = M9KR.Particles.FlareParts

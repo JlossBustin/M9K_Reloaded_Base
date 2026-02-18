@@ -11,7 +11,7 @@
 ]]--
 
 M9KR = M9KR or {}
-M9KR.Penetration = {}
+M9KR.Penetration = M9KR.Penetration or {}
 
 -- Create ConVars for penetration mode (server-only)
 if SERVER then
