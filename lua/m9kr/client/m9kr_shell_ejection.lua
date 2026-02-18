@@ -13,16 +13,16 @@ M9KR.ShellEjection = M9KR.ShellEjection or {}
 
 -- Universal shell ejection offsets (applied to all weapons)
 -- Adjust these values to fine-tune shell spawn position for all weapons
-M9KR.ShellEjection.UniversalOffset = M9KR.ShellEjection.UniversalOffset or {
+M9KR.ShellEjection.UniversalOffset = {
 	Forward = 5,   -- Units forward from weapon position
 	Right = 2,     -- Units right from weapon position
 	Up = 1         -- Units up from weapon position
 }
 
 -- Shell ejection sound parameters (increased from effect defaults for better audibility)
-M9KR.ShellEjection.SoundLevel = M9KR.ShellEjection.SoundLevel or {55, 65}       -- Sound radius (increased from 45-55)
-M9KR.ShellEjection.SoundPitch = M9KR.ShellEjection.SoundPitch or {80, 120}      -- Pitch variation
-M9KR.ShellEjection.SoundVolume = M9KR.ShellEjection.SoundVolume or {1.0, 1.15}   -- Volume (increased from 0.85-0.95)
+M9KR.ShellEjection.SoundLevel = {55, 65}       -- Sound radius (increased from 45-55)
+M9KR.ShellEjection.SoundPitch = {80, 120}      -- Pitch variation
+M9KR.ShellEjection.SoundVolume = {1.0, 1.15}   -- Volume (increased from 0.85-0.95)
 
 -- FAS2 collision sounds (caliber-specific) - complete database from m9kr_shell effect
 local ShellSounds_Rifle = {
