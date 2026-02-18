@@ -1180,27 +1180,20 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 		local optStr = tostring(options or "")
 		if string.find(optStr, "EjectBrass") then
 			if CLIENT then
-				-- Parse QC parameters: "EjectBrass_556 2 110"
-				-- Format: <effect_name> <attachment_id> <velocity>
-				local attachmentId = 2  -- Default
-				local velocity = 150    -- Default
-
-				-- Split by spaces and extract numeric parameters after the effect name
+				-- Parse QC parameters to cache the correct shell eject attachment
+				-- Format: "EjectBrass_556 2 110" → <effect_name> <attachment_id> <velocity>
 				local parts = {}
 				for part in string.gmatch(optStr, "%S+") do
 					table.insert(parts, part)
 				end
 
-				-- parts[1] = "EjectBrass_556" (effect name - ignore)
-				-- parts[2] = "2" (attachment ID)
-				-- parts[3] = "110" (velocity)
-				if parts[2] then attachmentId = tonumber(parts[2]) or 2 end
-				if parts[3] then velocity = tonumber(parts[3]) or 150 end
-
-				-- Call the custom shell ejection with QC parameters
-				self:EjectShell(attachmentId, velocity)
+				-- Cache the QC attachment ID so EjectShell() uses the correct position
+				-- This auto-detects the shell eject attachment from the viewmodel's animation data
+				if parts[2] then
+					self._qcShellAttachment = tonumber(parts[2])
+				end
 			end
-			return true -- Event handled (blocked)
+			return true -- Block default Source Engine brass (EjectShell is called from firing code)
 		end
 	end
 

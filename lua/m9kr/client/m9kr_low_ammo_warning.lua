@@ -167,11 +167,27 @@ end
 
 --[[
 	EntityFireBullets hook - Check ammo only when the local player fires
+
+	Note: The entity argument is whatever called :FireBullets().
+	M9K uses self.Owner:FireBullets() so entity is the player,
+	but we handle both cases for robustness.
 ]]--
 hook.Add("EntityFireBullets", "M9KR_LowAmmo_CheckOnFire", function(entity, data)
-	if entity ~= LocalPlayer() then return end
+	if not IsValid(entity) then return end
 
-	local weapon = entity:GetActiveWeapon()
+	-- Resolve the player who fired, whether entity is the player or the weapon
+	local owner
+	if entity:IsPlayer() then
+		owner = entity
+	elseif entity:IsWeapon() then
+		owner = entity:GetOwner()
+	else
+		return
+	end
+
+	if owner ~= LocalPlayer() then return end
+
+	local weapon = owner:GetActiveWeapon()
 	if not IsValid(weapon) then return end
 
 	-- Defer check to next frame so TakePrimaryAmmo has decremented Clip1()

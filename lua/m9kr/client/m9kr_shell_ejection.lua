@@ -138,8 +138,8 @@ function M9KR.ShellEjection.SpawnShell(weapon, viewmodel, attachmentId)
 	if not IsValid(weapon) or not IsValid(viewmodel) then return end
 	if not weapon.ShellModel then return end
 
-	-- Use attachment ID from QC event parameter, or fall back to weapon property, or default to 2
-	attachmentId = attachmentId or tonumber(weapon.ShellEjectAttachment) or 2
+	-- Attachment priority: explicit parameter > QC-cached > weapon property > default 2
+	attachmentId = attachmentId or weapon._qcShellAttachment or tonumber(weapon.ShellEjectAttachment) or 2
 
 	-- Get the attachment data
 	local attachment = viewmodel:GetAttachment(attachmentId)
@@ -181,17 +181,33 @@ end
 --[[
 	Detect other players firing and spawn worldmodel shells client-side
 	EntityFireBullets runs on both client and server — no networking needed
+
+	Note: The entity argument is whatever called :FireBullets().
+	M9K uses self.Owner:FireBullets() so entity is the player,
+	but we handle both cases for robustness.
 ]]--
 hook.Add("EntityFireBullets", "M9KR_ShellEjection_Worldmodel", function(entity, data)
-	if not IsValid(entity) or not entity:IsPlayer() then return end
+	if not IsValid(entity) then return end
+
+	-- Resolve the player who fired, whether entity is the player or the weapon
+	local owner
+	if entity:IsPlayer() then
+		owner = entity
+	elseif entity:IsWeapon() then
+		owner = entity:GetOwner()
+	else
+		return
+	end
+
+	if not IsValid(owner) or not owner:IsPlayer() then return end
 
 	-- Local player shells are handled by viewmodel EjectShell
-	if entity == LocalPlayer() then return end
+	if owner == LocalPlayer() then return end
 
-	local weapon = entity:GetActiveWeapon()
+	local weapon = owner:GetActiveWeapon()
 	if not IsValid(weapon) or not weapon.ShellModel then return end
 
-	M9KR.ShellEjection.SpawnWorldmodelShell(weapon, entity)
+	M9KR.ShellEjection.SpawnWorldmodelShell(weapon, owner)
 end)
 
 print("[M9K:R] Client-side shell ejection handler loaded (viewmodel + worldmodel with auto-determined positioning)")
