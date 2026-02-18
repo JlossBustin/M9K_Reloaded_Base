@@ -1016,19 +1016,18 @@ function SWEP:IronSight()
 	if not IsValid(self) then return end
 	if not IsValid(self.Owner) then return end
 
-	-- Safety mode controls (SERVER only to prevent prediction spam):
+	-- Safety and fire mode controls (SERVER only):
 	-- SHIFT + E + R = Enter safety mode
 	-- E + R (when in safety) = Exit safety and restore last fire mode
-	-- NOTE: Fire mode switching (E + R when not in safety) is handled by m9kr_firemode_handler.lua
+	-- E + R (when not in safety, no SHIFT) = Cycle fire mode
 	if SERVER and self.Owner:KeyDown(IN_USE) and self.Owner:KeyPressed(IN_RELOAD) then
 		if self:GetIsOnSafe() then
-			-- Currently in safety mode - E + R exits and restores last fire mode
 			self:SafetyOff()
 		elseif self.Owner:KeyDown(IN_SPEED) then
-			-- Not in safety, SHIFT held - SHIFT + E + R enters safety
 			self:SafetyOn()
+		elseif not self.Weapon:GetNWBool("Reloading", false) then
+			self:SelectFireMode()
 		end
-		-- Fire mode switching removed - handled by m9kr_firemode_handler.lua to avoid double-triggering
 	end
 
 	-- CLIENT: Detect safety state changes and play sound

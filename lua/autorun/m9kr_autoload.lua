@@ -68,7 +68,6 @@ if SERVER then
 	AddCSLuaFile("m9kr/shared/m9kr_ballistics.lua")
 	AddCSLuaFile("m9kr/shared/m9kr_ballistics_tracers.lua")
 	AddCSLuaFile("m9kr/shared/m9kr_penetration.lua")
-	AddCSLuaFile("m9kr/shared/m9kr_firemode_handler.lua")
 
 	-- Client files
 	AddCSLuaFile("m9kr/client/m9kr_particles.lua")
@@ -95,7 +94,6 @@ end
 include("m9kr/shared/m9kr_ballistics.lua")
 include("m9kr/shared/m9kr_ballistics_tracers.lua")
 include("m9kr/shared/m9kr_penetration.lua")
-include("m9kr/shared/m9kr_firemode_handler.lua")
 
 -- ============================================================================
 -- Server-only systems

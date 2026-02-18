@@ -732,6 +732,20 @@ function SWEP:Think()
 		self:CancelReload()
 	end
 
+	-- Safety toggle & fire mode switching (USE + RELOAD input)
+	-- E + SHIFT + R = Enter safety mode
+	-- E + R (when in safety) = Exit safety and restore last fire mode
+	-- E + R (when not in safety, no SHIFT) = Cycle fire mode
+	if SERVER and self.Owner:KeyDown(IN_USE) and self.Owner:KeyPressed(IN_RELOAD) then
+		if self:GetIsOnSafe() then
+			self:SafetyOff()
+		elseif self.Owner:KeyDown(IN_SPEED) then
+			self:SafetyOn()
+		elseif not self.Weapon:GetNWBool("Reloading", false) then
+			self:SelectFireMode()
+		end
+	end
+
 	-- Shotgun-specific: Burst fire logic
 	if self.BurstShotsRemaining and self.BurstShotsRemaining > 0 and (not self.NextBurstShotTime or CurTime() >= self.NextBurstShotTime) then
 		if not IsValid(self) or not IsValid(self:GetOwner()) or self:Clip1() <= 0 then
