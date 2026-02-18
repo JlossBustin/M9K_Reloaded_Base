@@ -1100,7 +1100,7 @@ function SWEP:IronSight()
 	end
 end
 
--- HUD drawing moved to lua/autorun/client/m9kr_hud.lua
+-- HUD drawing moved to lua/m9kr/client/m9kr_hud.lua
 -- CustomAmmoDisplay is now centralized
 
 -- Calculate scope sway offset and rotation based on movement
@@ -1499,7 +1499,7 @@ function SWEP:DrawHUD()
 
 	end
 
-	-- Chamber indicator and fire mode display handled by lua/autorun/client/m9kr_hud.lua
+	-- Chamber indicator and fire mode display handled by lua/m9kr/client/m9kr_hud.lua
 end
 
 --[[

@@ -122,8 +122,8 @@ SWEP.CrouchAng = Vector(0, 0, -7)
 SWEP.LowAmmoSoundThreshold = 0.33 -- Play low ammo sound when below 33% of clip
 
 -- Low ammo sounds and ADS sounds are now handled by centralized CLIENT files:
--- - lua/autorun/client/m9kr_low_ammo_warning.lua
--- - lua/autorun/client/m9kr_weapon_state_handler.lua
+-- - lua/m9kr/client/m9kr_low_ammo_warning.lua
+-- - lua/m9kr/client/m9kr_weapon_state_handler.lua
 
 -- Animation variables (clientside)
 if CLIENT then
