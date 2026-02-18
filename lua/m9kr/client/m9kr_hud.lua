@@ -112,12 +112,7 @@ surface.CreateFont("M9K_FireMode", {
 	antialias = true,
 })
 
--- M9K weapon base lookup (used throughout this file for base checks)
-local M9K_BASES = {
-	["carby_gun_base"] = true,
-	["carby_shotty_base"] = true,
-	["carby_scoped_base"] = true,
-}
+
 
 -- Idle fade tracking
 local lastActivityTime = 0
@@ -246,7 +241,7 @@ hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
 	if not IsValid(weapon) then return end
 
 	-- Only draw for M9K weapons
-	if not weapon.Base or not M9K_BASES[weapon.Base] then
+	if not weapon.Base or not M9KR.WeaponBases[weapon.Base] then
 		return
 	end
 
@@ -588,7 +583,7 @@ hook.Add("Think", "M9KR_HUD_ActivityTracker", function()
 	if not IsValid(weapon) then return end
 
 	-- Only track for M9K weapons
-	if not weapon.Base or not M9K_BASES[weapon.Base] then
+	if not weapon.Base or not M9KR.WeaponBases[weapon.Base] then
 		return
 	end
 
@@ -639,7 +634,7 @@ hook.Add("HUDShouldDraw", "M9KR_HUD_HideDefault", function(name)
 	if not IsValid(weapon) then return end
 
 	-- Check if this is an M9K weapon RIGHT NOW (no caching)
-	local isM9K = weapon.Base and M9K_BASES[weapon.Base]
+	local isM9K = weapon.Base and M9KR.WeaponBases[weapon.Base]
 
 	-- INSTANTLY hide HUD elements for M9K weapons (if custom HUD enabled)
 	if isM9K and GetConVar("m9kr_hud_mode"):GetInt() == 1 then

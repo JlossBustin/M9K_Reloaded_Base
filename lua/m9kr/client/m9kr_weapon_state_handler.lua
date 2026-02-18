@@ -32,12 +32,7 @@ local TRANSITION_TIME_FAST = 0.2   -- USE key, sprint
 local TRANSITION_TIME_NORMAL = 0.2 -- ADS/Scope entry/exit (fast and responsive)
 local TRANSITION_TIME_SAFETY = 0.25 -- Safety toggle
 
--- M9K weapon base lookup
-local M9K_BASES = {
-	["carby_gun_base"] = true,
-	["carby_shotty_base"] = true,
-	["carby_scoped_base"] = true,
-}
+
 
 -- ADS (Aim Down Sights) sounds - universal for all weapons
 local IRON_IN_SOUND = "m9k_indicators/ironin.wav"
@@ -514,7 +509,7 @@ hook.Add("Think", "M9KR_WeaponState_Update", function()
 	if not IsValid(weapon) then return end
 
 	-- Only handle M9K weapons (carby_gun_base, carby_shotty_base, carby_scoped_base)
-	if not weapon.Base or not M9K_BASES[weapon.Base] then
+	if not weapon.Base or not M9KR.WeaponBases[weapon.Base] then
 		return
 	end
 
@@ -571,7 +566,7 @@ hook.Add("CalcView", "M9KR_WeaponState_CalcView", function(ply, origin, angles, 
 	if not IsValid(weapon) then return end
 
 	-- Only handle M9K weapons
-	if not weapon.Base or not M9K_BASES[weapon.Base] then
+	if not weapon.Base or not M9KR.WeaponBases[weapon.Base] then
 		return
 	end
 

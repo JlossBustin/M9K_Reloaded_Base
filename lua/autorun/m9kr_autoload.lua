@@ -60,6 +60,19 @@ if SERVER then
 end
 
 -- ============================================================================
+-- Shared globals
+-- ============================================================================
+
+M9KR = M9KR or {}
+
+-- Weapon base lookup
+M9KR.WeaponBases = M9KR.WeaponBases or {
+	["carby_gun_base"] = true,
+	["carby_shotty_base"] = true,
+	["carby_scoped_base"] = true,
+}
+
+-- ============================================================================
 -- Send client & shared files to clients (SERVER only)
 -- ============================================================================
 
