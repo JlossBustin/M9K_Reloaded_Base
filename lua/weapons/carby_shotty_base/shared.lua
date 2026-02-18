@@ -796,34 +796,12 @@ function SWEP:Think()
 
 		self.BurstShotsRemaining = self.BurstShotsRemaining - 1
 		self.NextBurstShotTime = CurTime() + self.BurstDelay
-
-		-- Spawn barrel smoke when burst completes
-		if self.BurstShotsRemaining == 0 then
-			-- Create timer to spawn barrel smoke 0.75s after burst completes
-			local timerName = "ShotgunBurstSmoke_" .. self:EntIndex()
-			if CLIENT then
-				timerName = timerName .. "_CLIENT"
-			elseif SERVER then
-				timerName = timerName .. "_SERVER"
-			end
-
-			timer.Create(timerName, 0.75, 1, function()
-				if IsValid(self) and self.SpawnBarrelSmoke then
-					self:SpawnBarrelSmoke()
-				end
-			end)
-		end
 	end
 
 	-- Base class Think() logic (copied from carby_gun_base to fix inheritance)
 	-- Store viewmodel reference for muzzle flash effects
 	if CLIENT and IsValid(self.Owner) and self.Owner == LocalPlayer() then
 		self.OwnerViewModel = self.Owner:GetViewModel()
-
-		-- Update PCF particle lighting every frame
-		if self.SmokePCFLighting then
-			self:SmokePCFLighting()
-		end
 
 		-- Update progress values (TFA-style approach)
 		self:UpdateProgressRatios()

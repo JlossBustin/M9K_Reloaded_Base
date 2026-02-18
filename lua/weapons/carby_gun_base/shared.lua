@@ -421,21 +421,6 @@ function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
 	end
 end
 
---[[
-	Spawn barrel smoke trail using TFA PCF particle system
-	Called after firing (0.75s idle) or on reload
-	CLIENT-side only as PCF particles are client-rendered
-	Controlled by m9kr_muzzlesmoketrail ConVar (0=Disabled, 1=Enabled)
-	
-	DISABLED - All muzzle smoke effects have been removed
-]]--
-function SWEP:SpawnBarrelSmoke()
-	-- Muzzle smoke completely disabled
-	return
-
-
-end
-
 
 function SWEP:Equip()
 		self:SetHoldType(self.HoldType)
@@ -625,10 +610,6 @@ function SWEP:Holster()
 			M9KR.ViewModelMods.ResetBonePositions(vm)
 		end
 
-		-- Clean up PCF particles when holstering
-		if self.CleanParticles then
-			self:CleanParticles()
-		end
 	end
 
 	-- Stop action sounds (draw, reload, bolt, etc.) when switching weapons
@@ -682,10 +663,6 @@ function SWEP:OnRemove()
 			M9KR.ViewModelMods.ResetBonePositions(vm)
 		end
 
-		-- Clean up PCF particles when weapon is removed
-		if self.CleanParticles then
-			self:CleanParticles()
-		end
 	end
 end
  
@@ -771,7 +748,7 @@ function SWEP:FireBurstShot()
 	-- Low ammo sound handled by m9kr_low_ammo_warning.lua
 	self.Weapon:TakePrimaryAmmo(1)
 	
-	-- Track shot time for ADS recoil animation and smoke trail timer
+	-- Track shot time for ADS recoil animation
 	if CLIENT then
 		self.LastShotTime = CurTime()
 
@@ -912,7 +889,7 @@ function SWEP:PrimaryAttack()
 				-- Low ammo sound handled by m9kr_low_ammo_warning.lua
 				self.Weapon:TakePrimaryAmmo(1)
 
-				-- Track shot time for ADS recoil animation and smoke trail timer
+				-- Track shot time for ADS recoil animation
 				if CLIENT then
 					self.LastShotTime = CurTime()
 
@@ -1023,7 +1000,7 @@ function SWEP:PrimaryAttack()
 					self.ChamberRound = false
 				end
 				
-			-- Track shot time for ADS recoil animation and smoke trail timer
+			-- Track shot time for ADS recoil animation
 			if CLIENT then
 				self.LastShotTime = CurTime()
 
@@ -1154,7 +1131,7 @@ function SWEP:EjectShell(attachmentId, velocity)
 	local vm = self.Owner:GetViewModel()
 	if not IsValid(vm) then return end
 
-	-- Delegate to M9KR shell ejection system (handles physics, smoke trails, collision sounds, cleanup)
+	-- Delegate to M9KR shell ejection system (handles physics, collision sounds, cleanup)
 	M9KR.ShellEjection.SpawnShell(self, vm, attachmentId)
 end
 
@@ -1320,62 +1297,6 @@ function SWEP:ShootBulletInformation()
 	self.Primary.KickDown = origKickDown
 	self.Primary.KickHorizontal = origKickHorizontal
 
-	-- Mark that weapon has been fired (prevents tactical reload smoke)
-	self.Weapon.M9KR_HasFired = true
-
-	-- Mark that smoke hasn't spawned yet for this firing session
-	self.Weapon.M9KR_SmokeSpawned = false
-
-	-- Set fire time and handle smoke timer on BOTH CLIENT and SERVER
-	-- CLIENT: For first-person viewmodel smoke
-	-- SERVER: For third-person worldmodel smoke (visible to other players)
-
-	-- Set global fire time for smoke effect checking
-	M9KR_LastWeaponFireTime = M9KR_LastWeaponFireTime or {}
-	M9KR_LastWeaponFireTime[self.Weapon] = CurTime()
-
-	-- CLIENT: Stop any active PCF smoke particles when firing (shooting interrupts smoke)
-	if CLIENT and self.CleanParticles then
-		self:CleanParticles()
-	end
-
-	-- Store the time when this timer was created on weapon (not closure variable)
-	self.Weapon.M9KR_SmokeTimerCreateTime = CurTime()
-
-	-- Cancel any existing timer (shooting interrupts idle smoke)
-	local timerName = "M9KR_IdleSmoke_" .. self.Weapon:EntIndex()
-	if CLIENT then
-		timerName = timerName .. "_CLIENT"
-	elseif SERVER then
-		timerName = timerName .. "_SERVER"
-	end
-
-	if timer.Exists(timerName) then
-		timer.Remove(timerName)
-	end
-
-	-- Create new timer for 0.75 seconds
-	timer.Create(timerName, 0.75, 1, function()
-		if not IsValid(self.Weapon) then return end
-
-		-- Don't spawn if already spawned (prevents duplicate from reload)
-		if self.Weapon.M9KR_SmokeSpawned then
-			return
-		end
-
-		-- Don't spawn if weapon fired after this timer was created
-		M9KR_LastWeaponFireTime = M9KR_LastWeaponFireTime or {}
-		local lastFire = M9KR_LastWeaponFireTime[self.Weapon]
-		if lastFire and self.Weapon.M9KR_SmokeTimerCreateTime and lastFire > self.Weapon.M9KR_SmokeTimerCreateTime then
-			return
-		end
-
-		-- Mark as spawned
-		self.Weapon.M9KR_SmokeSpawned = true
-
-		-- Spawn barrel smoke effect
-		self:SpawnBarrelSmoke()
-	end)
 end
  
 /*---------------------------------------------------------
@@ -1690,25 +1611,6 @@ function SWEP:Reload()
 		-- Show reload animation to other players
 		self.Owner:SetAnimation(PLAYER_RELOAD)
 
-		-- Spawn barrel smoke on reload (only if weapon has been fired)
-		if self.Weapon.M9KR_HasFired and not self.Weapon.M9KR_SmokeSpawned then
-			self.Weapon.M9KR_SmokeSpawned = true
-
-			-- Cancel idle smoke timer if it exists (check both CLIENT and SERVER timers)
-			local timerName = "M9KR_IdleSmoke_" .. self.Weapon:EntIndex()
-			if CLIENT then
-				timerName = timerName .. "_CLIENT"
-			elseif SERVER then
-				timerName = timerName .. "_SERVER"
-			end
-
-			if timer.Exists(timerName) then
-				timer.Remove(timerName)
-			end
-
-			self:SpawnBarrelSmoke()
-		end
-
 		if not self.Owner:IsNPC() then
 			if IsValid(self.Owner:GetViewModel()) then
 				self.ResetSights = CurTime() + (self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1))
@@ -1778,25 +1680,6 @@ function SWEP:Reload()
 		else
 			self.ResetSights = CurTime() + 3
 		end
-	end
-
-	-- Spawn barrel smoke on reload (only if weapon has been fired)
-	if self.Weapon.M9KR_HasFired and not self.Weapon.M9KR_SmokeSpawned then
-		self.Weapon.M9KR_SmokeSpawned = true
-
-		-- Cancel idle smoke timer if it exists (check both CLIENT and SERVER timers)
-		local timerName = "M9KR_IdleSmoke_" .. self.Weapon:EntIndex()
-		if CLIENT then
-			timerName = timerName .. "_CLIENT"
-		elseif SERVER then
-			timerName = timerName .. "_SERVER"
-		end
-
-		if timer.Exists(timerName) then
-			timer.Remove(timerName)
-		end
-
-		self:SpawnBarrelSmoke()
 	end
 
 	if SERVER and IsValid(self.Weapon) then
@@ -2398,11 +2281,6 @@ function SWEP:Think()
 	-- Store viewmodel reference for muzzle flash effects (TFA Base approach)
 	if CLIENT and IsValid(self.Owner) and self.Owner == LocalPlayer() then
 		self.OwnerViewModel = self.Owner:GetViewModel()
-
-		-- Update PCF particle lighting every frame
-		if self.SmokePCFLighting then
-			self:SmokePCFLighting()
-		end
 
 		-- Update progress values (TFA-style approach - lightweight float lerp only, no heavy logic)
 		self:UpdateProgressRatios()
@@ -3396,105 +3274,6 @@ if CLIENT then
 	-- The clip count already includes the chambered round from tactical reload
 	function SWEP:DrawAmmo()
 		return true
-	end
-
-	--[[
-		Particle Lighting System
-		Handles PCF particle lighting and cleanup for weapon effects.
-		Adapted from TFA Base effects system.
-	]]--
-	local vector_up = Vector(0, 0, 1)
-	local SmokeLightingMin = Vector(0.15, 0.15, 0.15)
-	local SmokeLightingMax = Vector(0.75, 0.75, 0.75)
-	local SmokeLightingClamp = 1
-
-	-- Compute environmental lighting for PCF smoke particles (Control Point 1)
-	function SWEP:ComputeSmokeLighting(pos, nrm, pcf)
-		if not IsValid(pcf) then return end
-
-		local licht = render.ComputeLighting(pos, nrm)
-		local lichtFloat = math.Clamp((licht.r + licht.g + licht.b) / 3, 0, SmokeLightingClamp) / SmokeLightingClamp
-		local lichtFinal = LerpVector(lichtFloat, SmokeLightingMin, SmokeLightingMax)
-
-		pcf:SetControlPoint(1, lichtFinal)
-	end
-
-	-- Update lighting on all SmokePCF particles (called from Think)
-	function SWEP:SmokePCFLighting()
-		local att = self:LookupAttachment(self.MuzzleAttachment or 1)
-		if not att or att <= 0 then return end
-
-		local angpos = self:GetAttachment(att)
-		if not angpos then return end
-
-		local pos = angpos.Pos
-
-		if self.SmokePCF then
-			for _, v in pairs(self.SmokePCF) do
-				self:ComputeSmokeLighting(pos, vector_up, v)
-			end
-		end
-
-		local owner = self:GetOwner()
-		if IsValid(owner) and owner == LocalPlayer() then
-			local vm = owner:GetViewModel()
-			if IsValid(vm) and vm.SmokePCF then
-				local vmatt = vm:LookupAttachment(self.MuzzleAttachment or 1)
-				if vmatt and vmatt > 0 then
-					local vmangpos = vm:GetAttachment(vmatt)
-					if vmangpos then
-						for _, v in pairs(vm.SmokePCF) do
-							self:ComputeSmokeLighting(vmangpos.Pos, vector_up, v)
-						end
-					end
-				end
-			end
-		end
-	end
-
-	-- Clean up PCF particles on weapon and viewmodel (called on holster/remove)
-	function SWEP:CleanParticles()
-		if not IsValid(self) then return end
-
-		if self.SmokePCF then
-			for att, pcf in pairs(self.SmokePCF) do
-				if IsValid(pcf) then
-					pcf:StopEmission()
-				end
-			end
-			self.SmokePCF = {}
-		end
-
-		if self.StopParticles then
-			self:StopParticles()
-		end
-
-		if self.StopParticleEmission then
-			self:StopParticleEmission()
-		end
-
-		local owner = self:GetOwner()
-		if IsValid(owner) and owner == LocalPlayer() then
-			local vm = owner:GetViewModel()
-			if IsValid(vm) then
-				if vm.SmokePCF then
-					for att, pcf in pairs(vm.SmokePCF) do
-						if IsValid(pcf) then
-							pcf:StopEmission()
-						end
-					end
-					vm.SmokePCF = {}
-				end
-
-				if vm.StopParticles then
-					vm:StopParticles()
-				end
-
-				if vm.StopParticleEmission then
-					vm:StopParticleEmission()
-				end
-			end
-		end
 	end
 
 	/**************************
