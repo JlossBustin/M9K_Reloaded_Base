@@ -179,24 +179,19 @@ function M9KR.ShellEjection.SpawnWorldmodelShell(weapon, owner)
 end
 
 --[[
-	Network receiver for shell ejection events from other players
-	Spawns shells on worldmodels using auto-determined positions
+	Detect other players firing and spawn worldmodel shells client-side
+	EntityFireBullets runs on both client and server — no networking needed
 ]]--
-net.Receive("M9KR_ShellEject", function()
-	local shooter = net.ReadEntity()
-	local weaponClass = net.ReadString()
+hook.Add("EntityFireBullets", "M9KR_ShellEjection_Worldmodel", function(entity, data)
+	if not IsValid(entity) or not entity:IsPlayer() then return end
 
-	if not IsValid(shooter) then return end
+	-- Local player shells are handled by viewmodel EjectShell
+	if entity == LocalPlayer() then return end
 
-	-- Don't spawn shells for local player (already handled by viewmodel)
-	if shooter == LocalPlayer() then return end
+	local weapon = entity:GetActiveWeapon()
+	if not IsValid(weapon) or not weapon.ShellModel then return end
 
-	-- Get the weapon
-	local weapon = shooter:GetActiveWeapon()
-	if not IsValid(weapon) or weapon:GetClass() ~= weaponClass then return end
-
-	-- Spawn worldmodel shell using auto-determined position
-	M9KR.ShellEjection.SpawnWorldmodelShell(weapon, shooter)
+	M9KR.ShellEjection.SpawnWorldmodelShell(weapon, entity)
 end)
 
 print("[M9K:R] Client-side shell ejection handler loaded (viewmodel + worldmodel with auto-determined positioning)")

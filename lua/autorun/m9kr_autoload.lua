@@ -99,7 +99,6 @@ include("m9kr/shared/m9kr_penetration.lua")
 -- ============================================================================
 
 if SERVER then
-	include("m9kr/server/m9kr_shell_ejection_sv.lua")
 	include("m9kr/server/m9kr_squad_tracker.lua")
 end
 
