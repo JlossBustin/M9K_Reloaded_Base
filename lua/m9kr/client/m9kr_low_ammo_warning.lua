@@ -166,16 +166,20 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 end
 
 --[[
-	Think hook - Check active weapon ammo
+	EntityFireBullets hook - Check ammo only when the local player fires
 ]]--
-hook.Add("Think", "M9KR.LowAmmo.CheckActiveWeapon", function()
-	local ply = LocalPlayer()
-	if not IsValid(ply) or not ply:Alive() then return end
+hook.Add("EntityFireBullets", "M9KR_LowAmmo_CheckOnFire", function(entity, data)
+	if entity ~= LocalPlayer() then return end
 
-	local weapon = ply:GetActiveWeapon()
-	if IsValid(weapon) then
-		M9KR.LowAmmo.CheckWeapon(weapon)
-	end
+	local weapon = entity:GetActiveWeapon()
+	if not IsValid(weapon) then return end
+
+	-- Defer check to next frame so TakePrimaryAmmo has decremented Clip1()
+	timer.Simple(0, function()
+		if IsValid(weapon) then
+			M9KR.LowAmmo.CheckWeapon(weapon)
+		end
+	end)
 end)
 
 -- Precache all low ammo sounds
