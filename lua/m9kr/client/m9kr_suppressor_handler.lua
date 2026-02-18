@@ -34,9 +34,9 @@ function M9KR.Suppressor.GetWeaponState(weapon)
 end
 
 --[[
-	Clean up old weapon states
+	Clean up old weapon states (runs every 10 seconds)
 ]]--
-hook.Add("Think", "M9KR.Suppressor.CleanupStates", function()
+timer.Create("M9KR_Suppressor_Cleanup", 10, 0, function()
 	for weapon, state in pairs(M9KR.Suppressor.WeaponStates) do
 		if not IsValid(weapon) then
 			M9KR.Suppressor.WeaponStates[weapon] = nil

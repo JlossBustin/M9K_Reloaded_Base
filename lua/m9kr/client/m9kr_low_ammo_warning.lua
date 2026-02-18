@@ -59,9 +59,9 @@ function M9KR.LowAmmo.GetWeaponState(weapon)
 end
 
 --[[
-	Clean up old weapon states
+	Clean up old weapon states (runs every 10 seconds)
 ]]--
-hook.Add("Think", "M9KR.LowAmmo.CleanupStates", function()
+timer.Create("M9KR_LowAmmo_Cleanup", 10, 0, function()
 	for weapon, state in pairs(M9KR.LowAmmo.WeaponStates) do
 		if not IsValid(weapon) then
 			M9KR.LowAmmo.WeaponStates[weapon] = nil
