@@ -112,6 +112,13 @@ surface.CreateFont("M9K_FireMode", {
 	antialias = true,
 })
 
+-- M9K weapon base lookup (used throughout this file for base checks)
+local M9K_BASES = {
+	["carby_gun_base"] = true,
+	["carby_shotty_base"] = true,
+	["carby_scoped_base"] = true,
+}
+
 -- Idle fade tracking
 local lastActivityTime = 0
 local lastEyeAngles = Angle(0, 0, 0)
@@ -239,7 +246,7 @@ hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
 	if not IsValid(weapon) then return end
 
 	-- Only draw for M9K weapons
-	if not weapon.Base or not (weapon.Base == "carby_gun_base" or weapon.Base == "carby_shotty_base" or weapon.Base == "carby_scoped_base") then
+	if not weapon.Base or not M9K_BASES[weapon.Base] then
 		return
 	end
 
@@ -581,7 +588,7 @@ hook.Add("Think", "M9KR_HUD_ActivityTracker", function()
 	if not IsValid(weapon) then return end
 
 	-- Only track for M9K weapons
-	if not weapon.Base or not (weapon.Base == "carby_gun_base" or weapon.Base == "carby_shotty_base" or weapon.Base == "carby_scoped_base") then
+	if not weapon.Base or not M9K_BASES[weapon.Base] then
 		return
 	end
 
@@ -604,11 +611,26 @@ end)
 	HUDShouldDraw - INSTANTLY hide default HUD for M9K weapons
 	NO caching, NO delays - check weapon base EVERY time this is called
 ]]--
+local HUD_MANAGED = {
+	["CHudAmmo"] = true,
+	["CHudSecondaryAmmo"] = true,
+	["CHudHealth"] = true,
+	["CHudBattery"] = true,
+	["CHudSquadStatus"] = true,
+	["CHudCrosshair"] = true,
+}
+
+local HUD_HIDDEN = {
+	["CHudAmmo"] = true,
+	["CHudSecondaryAmmo"] = true,
+	["CHudHealth"] = true,
+	["CHudBattery"] = true,
+	["CHudSquadStatus"] = true,
+}
+
 hook.Add("HUDShouldDraw", "M9KR_HUD_HideDefault", function(name)
 	-- Fast path: only process relevant HUD elements
-	if name ~= "CHudAmmo" and name ~= "CHudSecondaryAmmo" and name ~= "CHudHealth" and name ~= "CHudBattery" and name ~= "CHudSquadStatus" and name ~= "CHudCrosshair" then
-		return
-	end
+	if not HUD_MANAGED[name] then return end
 
 	local ply = LocalPlayer()
 	if not IsValid(ply) then return end
@@ -617,11 +639,11 @@ hook.Add("HUDShouldDraw", "M9KR_HUD_HideDefault", function(name)
 	if not IsValid(weapon) then return end
 
 	-- Check if this is an M9K weapon RIGHT NOW (no caching)
-	local isM9K = weapon.Base == "carby_gun_base" or weapon.Base == "carby_shotty_base" or weapon.Base == "carby_scoped_base"
+	local isM9K = weapon.Base and M9K_BASES[weapon.Base]
 
 	-- INSTANTLY hide HUD elements for M9K weapons (if custom HUD enabled)
 	if isM9K and GetConVar("m9kr_hud_mode"):GetInt() == 1 then
-		if name == "CHudAmmo" or name == "CHudSecondaryAmmo" or name == "CHudHealth" or name == "CHudBattery" or name == "CHudSquadStatus" then
+		if HUD_HIDDEN[name] then
 			return false
 		end
 	end
@@ -644,7 +666,7 @@ if SWEP then
 	function SWEP:DrawAmmo()
 		-- Only apply for M9K weapons when using default GMod HUD
 		if GetConVar("m9kr_hud_mode"):GetInt() == 0 then
-			if self.Base and (self.Base == "carby_gun_base" or self.Base == "carby_shotty_base" or self.Base == "carby_scoped_base") then
+			if self.Base and M9K_BASES[self.Base] then
 				-- For default GMod HUD, show total ammo including chambered round
 				-- The clip count already includes the +1 from tactical reload
 				return true

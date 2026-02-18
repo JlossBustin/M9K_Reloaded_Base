@@ -23,6 +23,20 @@ if SERVER then
 		"Percentage chance (0-100) that a bullet will ricochet off eligible surfaces. Default 15% (~1 in 7 shots).", 0, 100)
 end
 
+-- Fallback ammo type lookup table for when shell model isn't in the ballistics database
+-- Used by DynamicPenetration() when weapon has no ShellModel or it's unrecognized
+local AMMO_FALLBACK = {
+	["pistol"]                = {penetration = 9,  maxRicochet = 2, canRicochet = true,  armorPiercing = false},
+	["357"]                   = {penetration = 12, maxRicochet = 3, canRicochet = true,  armorPiercing = false},
+	["smg1"]                  = {penetration = 14, maxRicochet = 4, canRicochet = false, armorPiercing = false},
+	["ar2"]                   = {penetration = 16, maxRicochet = 5, canRicochet = false, armorPiercing = false},
+	["SniperPenetratedRound"] = {penetration = 20, maxRicochet = 6, canRicochet = false, armorPiercing = false},
+	["buckshot"]              = {penetration = 5,  maxRicochet = 0, canRicochet = true,  armorPiercing = false},
+	["slam"]                  = {penetration = 12, maxRicochet = 1, canRicochet = true,  armorPiercing = false},
+}
+
+local AMMO_DEFAULT = {penetration = 14, maxRicochet = 4, canRicochet = false, armorPiercing = false}
+
 -- Near-miss bullet sounds
 local bulletMissSounds = {
 	"weapons/fx/nearmiss/bulletLtoR03.wav",
@@ -359,51 +373,14 @@ function M9KR.Penetration.DynamicPenetration(weapon, bouncenum, attacker, tr, pa
 		CanRicochet = ballisticsData.canRicochet
 		IsArmorPiercing = ballisticsData.armorPiercing
 	else
-		-- Fallback to old ammo type system if shell model not in database
+		-- Fallback to ammo type lookup table if shell model not in database
 		local AmmoType = (weapon.Primary and weapon.Primary.Ammo) or "ar2"
+		local ammoProps = AMMO_FALLBACK[AmmoType] or AMMO_DEFAULT
 
-		if AmmoType == "pistol" then
-			MaxPenetration = 9
-			MaxRicochet = 2
-			CanRicochet = true
-			IsArmorPiercing = false
-		elseif AmmoType == "357" then
-			MaxPenetration = 12
-			MaxRicochet = 3
-			CanRicochet = true
-			IsArmorPiercing = false
-		elseif AmmoType == "smg1" then
-			MaxPenetration = 14
-			MaxRicochet = 4
-			CanRicochet = false
-			IsArmorPiercing = false
-		elseif AmmoType == "ar2" then
-			MaxPenetration = 16
-			MaxRicochet = 5
-			CanRicochet = false
-			IsArmorPiercing = false
-		elseif AmmoType == "SniperPenetratedRound" then
-			MaxPenetration = 20
-			MaxRicochet = 6
-			CanRicochet = false
-			IsArmorPiercing = false
-		elseif AmmoType == "buckshot" then
-			MaxPenetration = 5
-			MaxRicochet = 0
-			CanRicochet = true
-			IsArmorPiercing = false
-		elseif AmmoType == "slam" then
-			MaxPenetration = 12
-			MaxRicochet = 1
-			CanRicochet = true
-			IsArmorPiercing = false
-		else
-			-- Default values for unknown ammo types
-			MaxPenetration = 14
-			MaxRicochet = 4
-			CanRicochet = false
-			IsArmorPiercing = false
-		end
+		MaxPenetration = ammoProps.penetration
+		MaxRicochet = ammoProps.maxRicochet
+		CanRicochet = ammoProps.canRicochet
+		IsArmorPiercing = ammoProps.armorPiercing
 	end
 
 	-- Update weapon's ricochet properties
@@ -604,7 +581,7 @@ function M9KR.Penetration.DynamicPenetration(weapon, bouncenum, attacker, tr, pa
 		if not IsValid(attacker) then return end
 		attacker:FireBullets({
 			Attacker = attacker,
-			Damage = paininfo.Damage * 0.7,  -- 70% damage after penetration
+			Damage = paininfo.Damage * 0.75,  -- 75% damage after penetration
 			Force = paininfo.Force,
 			Num = 1,
 			Src = exitPos,

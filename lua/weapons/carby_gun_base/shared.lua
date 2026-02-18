@@ -2509,6 +2509,16 @@ local IRONSIGHT_TIME = 0.8 -- Time to enter in the ironsight mode
    - Auto: First 3 shots accurate, then spread increases up to max
    - Burst: Slightly reduced spread throughout
 -----------------------------------------------------*/
+local HIP_SPREAD = {
+	["burst"]  = 0.007,
+	["double"] = 0.007,
+	["semi"]   = 0.002,
+	["bolt"]   = 0.0001,
+	["auto"]   = 0.0135,
+	["lever"]  = 0.002,
+	["single"] = 0.0001,
+}
+
 function SWEP:GetDynamicSpread()
 	-- Check ADS state on both CLIENT and SERVER
 	local isADS = false
@@ -2600,18 +2610,7 @@ function SWEP:GetDynamicSpread()
 	end
 
 	-- Hip fire - constant spread per fire mode (non-shotguns only)
-	if currentMode == "burst" or currentMode == "double" then
-		return 0.007
-	elseif currentMode == "semi" then
-		return 0.002
-	elseif currentMode == "bolt" then
-		return 0.0001
-	elseif currentMode == "auto" then
-		return 0.0135
-	end
-
-	-- Fallback
-	return 0.01
+	return HIP_SPREAD[currentMode] or 0.01
 end
 
 -- GetViewModelPosition

@@ -311,24 +311,8 @@ function SWEP:SelectFireMode(mode)
 		return
 	end
 
-	-- Apply specific fire mode settings
-	if mode == "auto" then
-		self.Primary.Automatic = true
-	elseif mode == "single" then
-		self.Primary.Automatic = false
-	elseif mode == "double" then
-		-- Double-barrel mode
-		self.Primary.Automatic = false
-	elseif mode == "pump" then
-		-- Pump-action mode
-		self.Primary.Automatic = false
-	elseif mode == "burst" then
-		-- Burst mode (like DP-12)
-		self.Primary.Automatic = false
-	else
-		-- Default to single for unknown modes
-		self.Primary.Automatic = false
-	end
+	-- Apply specific fire mode settings (only "auto" enables automatic fire)
+	self.Primary.Automatic = (mode == "auto")
 end
 
 --[[

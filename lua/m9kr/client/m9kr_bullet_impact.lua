@@ -13,6 +13,13 @@ M9KR_BulletImpact = GetConVar("m9kr_bullet_impact")
 M9KR_MetalImpact = GetConVar("m9kr_metal_impact")
 M9KR_DustImpact = GetConVar("m9kr_dust_impact")
 
+-- M9K weapon base lookup
+local M9K_BASES = {
+	["carby_gun_base"] = true,
+	["carby_shotty_base"] = true,
+	["carby_scoped_base"] = true,
+}
+
 -- Hook: Spawn bullet impact effects when M9K weapons fire
 hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 	if not IsValid(entity) then return end
@@ -30,8 +37,7 @@ hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 	if not IsValid(wep) then return end
 
 	-- Check if it's an M9K:R weapon
-	local isM9KWeapon = (wep.Base == "carby_gun_base" or wep.Base == "carby_scoped_base" or wep.Base == "carby_shotty_base")
-	if not isM9KWeapon then return end
+	if not wep.Base or not M9K_BASES[wep.Base] then return end
 
 	-- Use the Callback to spawn impact effects
 	local originalCallback = data.Callback
