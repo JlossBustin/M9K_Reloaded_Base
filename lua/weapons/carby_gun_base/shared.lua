@@ -1144,26 +1144,18 @@ end
 function SWEP:EjectShell(attachmentId, velocity)
 	-- Skip shell ejection for caseless ammunition weapons
 	if self.NoShellEject then return end
-	if CLIENT and IsValid(self) and IsValid(self.Owner) and self.ShellModel then
-		-- Use parameters from QC event, or fall back to defaults
-		attachmentId = attachmentId or tonumber(self.ShellEjectAttachment) or 2
+	if not CLIENT then return end
+	if not IsValid(self) or not IsValid(self.Owner) then return end
+	if not self.ShellModel then return end
 
-		local vm = self.Owner:GetViewModel()
-		if not IsValid(vm) then return end
+	-- Only spawn viewmodel shells for the local player
+	if self.Owner ~= LocalPlayer() then return end
 
-		-- Get shell eject attachment from QC parameters
-		local attachment = vm:GetAttachment(attachmentId)
-		if not attachment then return end
+	local vm = self.Owner:GetViewModel()
+	if not IsValid(vm) then return end
 
-		-- Create shell ejection effect using m9kr_shell
-		-- This handles physics, smoke trails, collision sounds, and cleanup automatically
-		local effectData = EffectData()
-		effectData:SetOrigin(attachment.Pos)
-		effectData:SetNormal(attachment.Ang:Forward())
-		effectData:SetEntity(self)
-		effectData:SetAttachment(attachmentId)
-		util.Effect("m9kr_shell", effectData)
-	end
+	-- Delegate to M9KR shell ejection system (handles physics, smoke trails, collision sounds, cleanup)
+	M9KR.ShellEjection.SpawnShell(self, vm, attachmentId)
 end
 
 --[[
@@ -1179,9 +1171,7 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 	-- Event 5011 = DoD:S muzzle flash
 	-- Event 5021 = TF2 muzzle flash
 	-- Event 6001 = Attachment-based muzzle flash
-	if event == 21 or event == 22 or event == 5001 or event == 5011 or event == 5021 or event == 6001 then
-		return true -- Block all animation-based muzzle flashes
-	end
+	if event == 21 or event == 22 or event == 5001 or event == 5011 or event == 5021 or event == 6001 then return true end
 
 	-- Block all EjectBrass events from weapon model QCs
 	-- Event 20 = Brass ejection event in GMod/Source Engine
@@ -3406,6 +3396,111 @@ if CLIENT then
 		-- Only hide if M9K:R HUD is enabled
 		if M9KR_HudHide[name] and GetConVar("m9kr_hud_mode"):GetInt() == 1 then
 			return false
+		end
+	end
+
+	-- Suppress default GMod ammo HUD when using default HUD mode
+	-- The clip count already includes the chambered round from tactical reload
+	function SWEP:DrawAmmo()
+		return true
+	end
+
+	--[[
+		Particle Lighting System
+		Handles PCF particle lighting and cleanup for weapon effects.
+		Adapted from TFA Base effects system.
+	]]--
+	local vector_up = Vector(0, 0, 1)
+	local SmokeLightingMin = Vector(0.15, 0.15, 0.15)
+	local SmokeLightingMax = Vector(0.75, 0.75, 0.75)
+	local SmokeLightingClamp = 1
+
+	-- Compute environmental lighting for PCF smoke particles (Control Point 1)
+	function SWEP:ComputeSmokeLighting(pos, nrm, pcf)
+		if not IsValid(pcf) then return end
+
+		local licht = render.ComputeLighting(pos, nrm)
+		local lichtFloat = math.Clamp((licht.r + licht.g + licht.b) / 3, 0, SmokeLightingClamp) / SmokeLightingClamp
+		local lichtFinal = LerpVector(lichtFloat, SmokeLightingMin, SmokeLightingMax)
+
+		pcf:SetControlPoint(1, lichtFinal)
+	end
+
+	-- Update lighting on all SmokePCF particles (called from Think)
+	function SWEP:SmokePCFLighting()
+		local att = self:LookupAttachment(self.MuzzleAttachment or 1)
+		if not att or att <= 0 then return end
+
+		local angpos = self:GetAttachment(att)
+		if not angpos then return end
+
+		local pos = angpos.Pos
+
+		if self.SmokePCF then
+			for _, v in pairs(self.SmokePCF) do
+				self:ComputeSmokeLighting(pos, vector_up, v)
+			end
+		end
+
+		local owner = self:GetOwner()
+		if IsValid(owner) and owner == LocalPlayer() then
+			local vm = owner:GetViewModel()
+			if IsValid(vm) and vm.SmokePCF then
+				local vmatt = vm:LookupAttachment(self.MuzzleAttachment or 1)
+				if vmatt and vmatt > 0 then
+					local vmangpos = vm:GetAttachment(vmatt)
+					if vmangpos then
+						for _, v in pairs(vm.SmokePCF) do
+							self:ComputeSmokeLighting(vmangpos.Pos, vector_up, v)
+						end
+					end
+				end
+			end
+		end
+	end
+
+	-- Clean up PCF particles on weapon and viewmodel (called on holster/remove)
+	function SWEP:CleanParticles()
+		if not IsValid(self) then return end
+
+		if self.SmokePCF then
+			for att, pcf in pairs(self.SmokePCF) do
+				if IsValid(pcf) then
+					pcf:StopEmission()
+				end
+			end
+			self.SmokePCF = {}
+		end
+
+		if self.StopParticles then
+			self:StopParticles()
+		end
+
+		if self.StopParticleEmission then
+			self:StopParticleEmission()
+		end
+
+		local owner = self:GetOwner()
+		if IsValid(owner) and owner == LocalPlayer() then
+			local vm = owner:GetViewModel()
+			if IsValid(vm) then
+				if vm.SmokePCF then
+					for att, pcf in pairs(vm.SmokePCF) do
+						if IsValid(pcf) then
+							pcf:StopEmission()
+						end
+					end
+					vm.SmokePCF = {}
+				end
+
+				if vm.StopParticles then
+					vm:StopParticles()
+				end
+
+				if vm.StopParticleEmission then
+					vm:StopParticleEmission()
+				end
+			end
 		end
 	end
 

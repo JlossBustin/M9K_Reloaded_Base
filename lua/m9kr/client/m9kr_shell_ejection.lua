@@ -179,32 +179,6 @@ function M9KR.ShellEjection.SpawnWorldmodelShell(weapon, owner)
 end
 
 --[[
-	Override weapon base EjectShell function for viewmodel shells
-	The QC event "EjectBrass_762Nato 3" automatically calls this function with attachmentId = 3
-]]--
-local SWEP = FindMetaTable("Weapon")
-if SWEP then
-	-- Store original function
-	SWEP.OriginalEjectShell = SWEP.OriginalEjectShell or SWEP.EjectShell
-
-	-- Override with viewmodel shell spawning
-	function SWEP:EjectShell(attachmentId, velocity)
-		if not CLIENT or not IsValid(self) or not IsValid(self.Owner) then return end
-		if not self.ShellModel then return end
-
-		-- Only for local player
-		if self.Owner ~= LocalPlayer() then return end
-
-		local vm = self.Owner:GetViewModel()
-		if not IsValid(vm) then return end
-
-		-- Spawn shell from viewmodel
-		M9KR.ShellEjection.SpawnShell(self, vm, attachmentId)
-	end
-end
-
-
---[[
 	Network receiver for shell ejection events from other players
 	Spawns shells on worldmodels using auto-determined positions
 ]]--

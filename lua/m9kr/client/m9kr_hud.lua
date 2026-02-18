@@ -654,31 +654,4 @@ hook.Add("HUDShouldDraw", "M9KR_HUD_HideDefault", function(name)
 	end
 end)
 
---[[
-	DrawAmmo Override
-	DrawWeaponSelection is now defined directly in the weapon bases (gun_base, shotty_base, scoped_base)
-]]--
-local SWEP = FindMetaTable("Weapon")
-if SWEP then
-	-- Override DrawAmmo for GMod default HUD mode
-	-- This includes the chambered round in the clip count
-	local oldDrawAmmo = SWEP.DrawAmmo
-	function SWEP:DrawAmmo()
-		-- Only apply for M9K weapons when using default GMod HUD
-		if GetConVar("m9kr_hud_mode"):GetInt() == 0 then
-			if self.Base and M9K_BASES[self.Base] then
-				-- For default GMod HUD, show total ammo including chambered round
-				-- The clip count already includes the +1 from tactical reload
-				return true
-			end
-		end
-
-		-- Fall back to original behavior
-		if oldDrawAmmo then
-			return oldDrawAmmo(self)
-		end
-		return true
-	end
-end
-
 print("[M9K:R] HUD system loaded")
