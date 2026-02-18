@@ -1,0 +1,17 @@
+{
+	"title": "Carby's M9K Reloaded - Base",
+	"type": "weapon",
+	"tags": [
+		"realism",
+		"roleplay"
+	],
+	"ignore": [
+		"*.psd",
+		"*.blend",
+		"*.tga",
+		"*.xcf",
+		".git/*",
+		".vscode/*",
+		".claude/*"
+	]
+}

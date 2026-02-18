@@ -1,0 +1,5 @@
+"VertexLitGeneric"
+{
+    "$basetexture" "models/weapons/shell_casings/300blk/shell_300blk_normal"
+    "$halflambert" "1"
+}
