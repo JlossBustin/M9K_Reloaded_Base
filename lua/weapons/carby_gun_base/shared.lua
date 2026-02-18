@@ -1339,7 +1339,7 @@ function SWEP:ShootBulletInformation()
 
 	-- Set global fire time for smoke effect checking
 	M9KR_LastWeaponFireTime = M9KR_LastWeaponFireTime or {}
-	M9KR_LastWeaponFireTime[self.Weapon:EntIndex()] = CurTime()
+	M9KR_LastWeaponFireTime[self.Weapon] = CurTime()
 
 	-- CLIENT: Stop any active PCF smoke particles when firing (shooting interrupts smoke)
 	if CLIENT and self.CleanParticles then
@@ -1372,7 +1372,7 @@ function SWEP:ShootBulletInformation()
 
 		-- Don't spawn if weapon fired after this timer was created
 		M9KR_LastWeaponFireTime = M9KR_LastWeaponFireTime or {}
-		local lastFire = M9KR_LastWeaponFireTime[self.Weapon:EntIndex()]
+		local lastFire = M9KR_LastWeaponFireTime[self.Weapon]
 		if lastFire and self.Weapon.M9KR_SmokeTimerCreateTime and lastFire > self.Weapon.M9KR_SmokeTimerCreateTime then
 			return
 		end

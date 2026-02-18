@@ -157,7 +157,7 @@ hook.Add("Think", "M9KR.BeltFed.Think", function()
 	if not IsValid(vm) then return end
 
 	local weaponClass = weapon:GetClass()
-	local weaponID = weapon:EntIndex()
+	local weaponID = weapon
 	local currentVMModel = vm:GetModel()
 
 	-- IMPORTANT: Detect viewmodel MODEL change or weapon CLASS change

@@ -46,9 +46,8 @@ local LastAmmoSoundByAmmoType = {
 function M9KR.LowAmmo.GetWeaponState(weapon)
 	if not IsValid(weapon) then return nil end
 
-	local entIndex = weapon:EntIndex()
-	if not M9KR.LowAmmo.WeaponStates[entIndex] then
-		M9KR.LowAmmo.WeaponStates[entIndex] = {
+	if not M9KR.LowAmmo.WeaponStates[weapon] then
+		M9KR.LowAmmo.WeaponStates[weapon] = {
 			wasLowAmmo = false,
 			lastWarnTime = 0,
 			lastClip = 0,
@@ -56,17 +55,16 @@ function M9KR.LowAmmo.GetWeaponState(weapon)
 		}
 	end
 
-	return M9KR.LowAmmo.WeaponStates[entIndex]
+	return M9KR.LowAmmo.WeaponStates[weapon]
 end
 
 --[[
-	Clean up old weapon states (runs every 10 seconds)
+	Clean up old weapon states
 ]]--
-timer.Create("M9KR_LowAmmo_Cleanup", 10, 0, function()
-	for entIndex, state in pairs(M9KR.LowAmmo.WeaponStates) do
-		local ent = Entity(entIndex)
-		if not IsValid(ent) then
-			M9KR.LowAmmo.WeaponStates[entIndex] = nil
+hook.Add("Think", "M9KR.LowAmmo.CleanupStates", function()
+	for weapon, state in pairs(M9KR.LowAmmo.WeaponStates) do
+		if not IsValid(weapon) then
+			M9KR.LowAmmo.WeaponStates[weapon] = nil
 		end
 	end
 end)
@@ -168,12 +166,13 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 end
 
 --[[
-	EntityFireBullets hook - Check ammo only when the local player fires
+	Think hook - Check active weapon ammo
 ]]--
-hook.Add("EntityFireBullets", "M9KR_LowAmmo_CheckOnFire", function(entity, data)
-	if entity ~= LocalPlayer() then return end
+hook.Add("Think", "M9KR.LowAmmo.CheckActiveWeapon", function()
+	local ply = LocalPlayer()
+	if not IsValid(ply) or not ply:Alive() then return end
 
-	local weapon = entity:GetActiveWeapon()
+	local weapon = ply:GetActiveWeapon()
 	if IsValid(weapon) then
 		M9KR.LowAmmo.CheckWeapon(weapon)
 	end

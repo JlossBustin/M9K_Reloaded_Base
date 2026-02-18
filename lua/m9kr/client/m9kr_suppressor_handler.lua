@@ -22,26 +22,24 @@ M9KR.Suppressor.WeaponStates = M9KR.Suppressor.WeaponStates or {}
 function M9KR.Suppressor.GetWeaponState(weapon)
 	if not IsValid(weapon) then return nil end
 
-	local entIndex = weapon:EntIndex()
-	if not M9KR.Suppressor.WeaponStates[entIndex] then
-		M9KR.Suppressor.WeaponStates[entIndex] = {
+	if not M9KR.Suppressor.WeaponStates[weapon] then
+		M9KR.Suppressor.WeaponStates[weapon] = {
 			lastSuppressorState = false,
 			isAnimating = false,
 			animEndTime = 0,
 		}
 	end
 
-	return M9KR.Suppressor.WeaponStates[entIndex]
+	return M9KR.Suppressor.WeaponStates[weapon]
 end
 
 --[[
 	Clean up old weapon states
 ]]--
 hook.Add("Think", "M9KR.Suppressor.CleanupStates", function()
-	for entIndex, state in pairs(M9KR.Suppressor.WeaponStates) do
-		local ent = Entity(entIndex)
-		if not IsValid(ent) then
-			M9KR.Suppressor.WeaponStates[entIndex] = nil
+	for weapon, state in pairs(M9KR.Suppressor.WeaponStates) do
+		if not IsValid(weapon) then
+			M9KR.Suppressor.WeaponStates[weapon] = nil
 		end
 	end
 end)

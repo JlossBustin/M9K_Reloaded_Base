@@ -44,10 +44,8 @@ local IRON_OUT_SOUND = "m9k_indicators/ironout.wav"
 function M9KR.WeaponState.GetState(weapon)
 	if not IsValid(weapon) then return nil end
 
-	local entIndex = weapon:EntIndex()
-
-	if not weaponStates[entIndex] then
-		weaponStates[entIndex] = {
+	if not weaponStates[weapon] then
+		weaponStates[weapon] = {
 			-- Transition timing
 			fovTransitionStart = 0,
 			fovTransitionDuration = TRANSITION_TIME_NORMAL,
@@ -82,7 +80,7 @@ function M9KR.WeaponState.GetState(weapon)
 		}
 	end
 
-	return weaponStates[entIndex]
+	return weaponStates[weapon]
 end
 
 --[[
@@ -100,10 +98,9 @@ end
 	Cleanup invalid weapon states
 ]]--
 hook.Add("Think", "M9KR_WeaponState_Cleanup", function()
-	for entIndex, _ in pairs(weaponStates) do
-		local ent = Entity(entIndex)
-		if not IsValid(ent) then
-			weaponStates[entIndex] = nil
+	for weapon, _ in pairs(weaponStates) do
+		if not IsValid(weapon) then
+			weaponStates[weapon] = nil
 		end
 	end
 end)
