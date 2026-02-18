@@ -2069,6 +2069,9 @@ function SWEP:SafetyOff()
 		end
 	end
 
+	-- Block immediate fire mode cycling after exiting safety
+	self.NextFireSelect = CurTime() + 0.5
+
 	-- CLIENT: Visual/audio feedback
 	if CLIENT then
 		self.Weapon:EmitSound("Weapon_AR2.Empty")
@@ -2084,13 +2087,13 @@ function SWEP:SelectFireMode()
     if self.NextFireSelect and CurTime() < self.NextFireSelect then return end
     self.NextFireSelect = CurTime() + 0.5
 
-	-- Cycle through the fire modes
-	self:CycleFireMode()
+	-- Cycle through the fire modes (returns false for single-mode weapons)
+	local cycled = self:CycleFireMode()
+	if not cycled then return end
 
-	-- Play selection sound
+	-- Play selection sound only when fire mode actually changed
 	if IsValid(self.Weapon) then
 		self.Weapon:EmitSound("Weapon_AR2.Empty")
-		return
     end
 end
  

@@ -996,6 +996,9 @@ function SWEP:SafetyOff()
 		end
 	end
 
+	-- Block immediate fire mode cycling after exiting safety
+	self.NextFireSelect = CurTime() + 0.5
+
 	-- CLIENT: Visual/audio feedback
 	if CLIENT then
 		self.Weapon:EmitSound("Weapon_AR2.Empty")
