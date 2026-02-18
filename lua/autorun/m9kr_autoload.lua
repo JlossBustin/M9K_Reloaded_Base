@@ -65,8 +65,8 @@ end
 
 M9KR = M9KR or {}
 
--- Weapon base lookup
-M9KR.WeaponBases = M9KR.WeaponBases or {
+-- Weapon base lookup (hard-set: constant definition, lua refresh must pick up source changes)
+M9KR.WeaponBases = {
 	["carby_gun_base"] = true,
 	["carby_shotty_base"] = true,
 	["carby_scoped_base"] = true,
