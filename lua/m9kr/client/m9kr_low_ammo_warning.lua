@@ -60,9 +60,9 @@ function M9KR.LowAmmo.GetWeaponState(weapon)
 end
 
 --[[
-	Clean up old weapon states
+	Clean up old weapon states (runs every 10 seconds)
 ]]--
-hook.Add("Think", "M9KR.LowAmmo.CleanupStates", function()
+timer.Create("M9KR_LowAmmo_Cleanup", 10, 0, function()
 	for entIndex, state in pairs(M9KR.LowAmmo.WeaponStates) do
 		local ent = Entity(entIndex)
 		if not IsValid(ent) then
@@ -78,11 +78,7 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 	if not IsValid(weapon) then return end
 
 	-- Only check M9KR weapons (verify they use M9K base classes)
-	if not weapon.Base then return end
-	local isM9KRWeapon = weapon.Base == "carby_gun_base" or
-	                     weapon.Base == "carby_shotty_base" or
-	                     weapon.Base == "carby_scoped_base"
-	if not isM9KRWeapon then return end
+	if not weapon.Base or not M9KR.WeaponBases[weapon.Base] then return end
 
 	-- Verify weapon has proper primary structure
 	if not weapon.Primary or not weapon.Primary.ClipSize then return end
@@ -172,13 +168,12 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 end
 
 --[[
-	Think hook - Check active weapon ammo
+	EntityFireBullets hook - Check ammo only when the local player fires
 ]]--
-hook.Add("Think", "M9KR.LowAmmo.CheckActiveWeapon", function()
-	local ply = LocalPlayer()
-	if not IsValid(ply) or not ply:Alive() then return end
+hook.Add("EntityFireBullets", "M9KR_LowAmmo_CheckOnFire", function(entity, data)
+	if entity ~= LocalPlayer() then return end
 
-	local weapon = ply:GetActiveWeapon()
+	local weapon = entity:GetActiveWeapon()
 	if IsValid(weapon) then
 		M9KR.LowAmmo.CheckWeapon(weapon)
 	end
