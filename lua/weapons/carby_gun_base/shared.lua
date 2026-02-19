@@ -1118,7 +1118,7 @@ end
 	NOTE: Shell collision sounds are handled by m9kr_shell_ejection.lua and m9kr_shell effect.
 	No need for duplicate sound tables in weapon base.
 ]]
-function SWEP:EjectShell(attachmentId, velocity)
+function SWEP:EjectShell()
 	-- Skip shell ejection for caseless ammunition weapons
 	if self.NoShellEject then return end
 	if not CLIENT then return end
@@ -1131,8 +1131,21 @@ function SWEP:EjectShell(attachmentId, velocity)
 	local vm = self.Owner:GetViewModel()
 	if not IsValid(vm) then return end
 
-	-- Delegate to M9KR shell ejection system (handles physics, collision sounds, cleanup)
-	M9KR.ShellEjection.SpawnShell(self, vm, attachmentId)
+	-- Resolve shell eject attachment: QC-cached > weapon property > default 2
+	local attachmentId = self._qcShellAttachment or tonumber(self.ShellEjectAttachment) or 2
+
+	-- Get attachment position from viewmodel
+	local attachment = vm:GetAttachment(attachmentId)
+	if not attachment then return end
+
+	-- Create shell ejection effect directly
+	local effectData = EffectData()
+	effectData:SetOrigin(attachment.Pos)
+	effectData:SetNormal(attachment.Ang:Forward())
+	effectData:SetEntity(self)
+	effectData:SetAttachment(attachmentId)
+
+	util.Effect("m9kr_shell", effectData)
 end
 
 --[[

@@ -129,34 +129,6 @@ end
 
 
 --[[
-	Spawn shell ejection effect from viewmodel
-	@param weapon - The weapon entity
-	@param viewmodel - The viewmodel entity
-	@param attachmentId - Attachment index (passed from QC event or weapon property)
-]]--
-function M9KR.ShellEjection.SpawnShell(weapon, viewmodel, attachmentId)
-	if not IsValid(weapon) or not IsValid(viewmodel) then return end
-	if not weapon.ShellModel then return end
-
-	-- Attachment priority: explicit parameter > QC-cached > weapon property > default 2
-	attachmentId = attachmentId or weapon._qcShellAttachment or tonumber(weapon.ShellEjectAttachment) or 2
-
-	-- Get the attachment data
-	local attachment = viewmodel:GetAttachment(attachmentId)
-	if not attachment then return end  -- Attachment doesn't exist
-
-	-- Create shell ejection effect
-	local effectData = EffectData()
-	effectData:SetOrigin(attachment.Pos)
-	effectData:SetNormal(attachment.Ang:Forward())
-	effectData:SetEntity(weapon)
-	effectData:SetAttachment(attachmentId)
-
-	util.Effect("m9kr_shell", effectData)
-end
-
-
---[[
 	Spawn shell ejection effect from worldmodel using auto-determined position
 	@param weapon - The weapon entity (worldmodel)
 	@param owner - The player holding the weapon
