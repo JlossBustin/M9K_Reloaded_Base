@@ -290,7 +290,7 @@ function SWEP:UpdateProgressRatios()
 	local crouchTarget = bCrouching and 1 or 0
 
 	-- Calculate speeds (must match IRONSIGHT_TIME)
-	local IRONSIGHT_TIME = 0.8
+	local IRONSIGHT_TIME = 0.55
 	local adsTransitionSpeed = 12.5 / (IRONSIGHT_TIME / 0.3)
 	local sprintTransitionSpeed = 7.5
 	local safetyTransitionSpeed = 12.5 / ((IRONSIGHT_TIME * 0.5) / 0.3)
@@ -567,6 +567,7 @@ function SWEP:UpdateBeltAmmo()
 
 			if reloadElapsed >= showTime then
 				self.m9kr_BeltMultiShowAll = true
+				self.m9kr_BeltMultiHideAll = false
 			elseif reloadElapsed >= hideTime then
 				self.m9kr_BeltMultiShowAll = false
 				self.m9kr_BeltMultiHideAll = true
@@ -1407,9 +1408,12 @@ function SWEP:GetViewModelPosition(pos, ang)
 			self.ViewModelPunchPitchMultiplier or 0.5,
 			enableViewmodelRecoil and 0.25 or 0)
 
+		-- Yaw ViewPunch is always zeroed when ADS: fire_ads animation already
+		-- provides stabilized visual recoil, so additional horizontal viewmodel
+		-- kick from ViewPunch causes unwanted sideways muzzle deviation.
 		local yawMult = Lerp(self.IronSightsProgress,
 			self.ViewModelPunchYawMultiplier or 0.5,
-			enableViewmodelRecoil and 0.25 or 0)
+			0)
 
 		local verticalMult = Lerp(self.IronSightsProgress,
 			self.ViewModelPunch_VerticalMultiplier or 0.3,
