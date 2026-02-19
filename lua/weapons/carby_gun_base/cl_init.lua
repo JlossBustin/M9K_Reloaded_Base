@@ -65,6 +65,8 @@ function SWEP:M9KR_StartFOVTransition(targetFOV, duration)
 	end
 
 	self.m9kr_FOVStart = actualStart
+	-- targetFOV == 0 means "return to default" (exit ADS)
+	self.m9kr_FOVReturningToDefault = (targetFOV == 0)
 	self.m9kr_FOVTarget = targetFOV == 0 and self.Owner:GetFOV() or targetFOV
 	self.m9kr_FOVTransitionStart = CurTime()
 	self.m9kr_FOVTransitionDuration = duration or FOV_TRANSITION_NORMAL
@@ -221,7 +223,8 @@ function SWEP:UpdateWeaponInputState()
 	t = 1 - math.pow(1 - t, 3) -- Ease-out cubic
 
 	local newFOV = Lerp(t, self.m9kr_FOVStart or 0, self.m9kr_FOVTarget or 0)
-	if t >= 1 and (self.m9kr_FOVTarget or 0) == ply:GetFOV() then
+	if t >= 1 and self.m9kr_FOVReturningToDefault then
+		-- Transition back to default complete — stop overriding FOV
 		self.m9kr_FOVCurrent = 0
 	else
 		self.m9kr_FOVCurrent = newFOV
@@ -513,6 +516,8 @@ function SWEP:UpdateBeltAmmo()
 
 	elseif isBodygroupBased then
 		-- BODYGROUP-BASED BELT (like Ameli)
+		-- Compute desired bodygroup state here, but APPLY in PreDrawViewModel
+		-- (bodygroups set in Think() get reset by the engine's animation system before rendering)
 		if isReloading then
 			if not self.m9kr_BeltReloadStart then
 				self.m9kr_BeltReloadStart = CurTime()
@@ -531,25 +536,22 @@ function SWEP:UpdateBeltAmmo()
 				showTime = self.BeltShowTime or 5.0
 			end
 
-			local bodygroup
 			if reloadElapsed < hideTime then
-				bodygroup = math.Clamp(self:Clip1(), 0, self.BeltMax - 1)
+				self.m9kr_BeltBodygroupValue = math.Clamp(self:Clip1(), 0, self.BeltMax - 1)
 			elseif reloadElapsed < showTime then
-				bodygroup = 0
+				self.m9kr_BeltBodygroupValue = 0
 			else
-				bodygroup = self.BeltMax - 1
+				self.m9kr_BeltBodygroupValue = self.BeltMax - 1
 			end
-
-			BeltUpdateBodygroup(vm, self, bodygroup)
 		else
 			self.m9kr_BeltReloadStart = nil
 			self.m9kr_BeltReloadWasEmpty = nil
-			local bodygroup = math.Clamp(self:Clip1(), 0, self.BeltMax - 1)
-			BeltUpdateBodygroup(vm, self, bodygroup)
+			self.m9kr_BeltBodygroupValue = math.Clamp(self:Clip1(), 0, self.BeltMax - 1)
 		end
 
 	elseif isMultiBodygroup then
 		-- MULTI-BODYGROUP BELT (like Stoner 63)
+		-- Compute desired bodygroup states here, but APPLY in PreDrawViewModel
 		if isReloading then
 			if not self.m9kr_BeltReloadStart then
 				self.m9kr_BeltReloadStart = CurTime()
@@ -569,16 +571,19 @@ function SWEP:UpdateBeltAmmo()
 			end
 
 			if reloadElapsed >= showTime then
-				BeltUpdateMultiBodygroup(vm, self, true)
+				self.m9kr_BeltMultiShowAll = true
 			elseif reloadElapsed >= hideTime then
-				for threshold, bgIndex in pairs(self.BeltBodygroups) do
-					vm:SetBodygroup(bgIndex, 1)
-				end
+				self.m9kr_BeltMultiShowAll = false
+				self.m9kr_BeltMultiHideAll = true
+			else
+				self.m9kr_BeltMultiShowAll = false
+				self.m9kr_BeltMultiHideAll = false
 			end
 		else
 			self.m9kr_BeltReloadStart = nil
 			self.m9kr_BeltReloadWasEmpty = nil
-			BeltUpdateMultiBodygroup(vm, self, false)
+			self.m9kr_BeltMultiShowAll = false
+			self.m9kr_BeltMultiHideAll = false
 		end
 	end
 end
@@ -610,6 +615,76 @@ hook.Add("PreDrawViewModel", "M9KR_ViewModelHandler", function(vm, ply, weapon)
 	-- Apply viewmodel bone modifications
 	if weapon.ApplyViewModelBoneMods and weapon.ViewModelBoneMods then
 		weapon:ApplyViewModelBoneMods(vm)
+	end
+
+	-- Apply bodygroup-based belt state (must be set in PreDrawViewModel, not Think,
+	-- because the engine's animation system resets bodygroups before rendering)
+	if weapon.BeltBG and weapon.m9kr_BeltBodygroupValue ~= nil then
+		vm:SetBodygroup(weapon.BeltBG, weapon.m9kr_BeltBodygroupValue)
+	end
+
+	-- Apply multi-bodygroup belt state
+	if weapon.BeltBodygroups then
+		if weapon.m9kr_BeltMultiHideAll then
+			for threshold, bgIndex in pairs(weapon.BeltBodygroups) do
+				vm:SetBodygroup(bgIndex, 1)
+			end
+		else
+			local clip = weapon:Clip1()
+			for threshold, bgIndex in pairs(weapon.BeltBodygroups) do
+				if weapon.m9kr_BeltMultiShowAll or clip > threshold then
+					vm:SetBodygroup(bgIndex, 0)
+				else
+					vm:SetBodygroup(bgIndex, 1)
+				end
+			end
+		end
+	end
+end)
+
+-- PostDrawViewModel: fallback for deferred effects on models without QC animation events
+-- Muzzle flash and shell eject effects are queued during prediction and normally consumed
+-- by FireAnimationEvent during render. If the viewmodel has no QC muzzle flash or
+-- EjectBrass events, the pending effects would never be created. This hook fires after
+-- the viewmodel is fully drawn, so vm:GetAttachment() is reliable.
+hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
+	if not IsValid(weapon) then return end
+
+	-- Process remaining pending muzzle flash (model had no QC muzzle flash events)
+	if weapon.m9kr_PendingMuzzleFlash then
+		local pending = weapon.m9kr_PendingMuzzleFlash
+		weapon.m9kr_PendingMuzzleFlash = nil
+
+		if IsValid(ply) then
+			local fx = EffectData()
+			fx:SetEntity(weapon)
+			fx:SetOrigin(ply:GetShootPos())
+
+			local muzzleDir = ply:GetAimVector()
+			local attId = weapon:LookupAttachment(weapon.MuzzleAttachment or "1")
+			if attId and attId > 0 then
+				local att = vm:GetAttachment(attId)
+				if att and att.Ang then
+					muzzleDir = att.Ang:Forward()
+				end
+			end
+
+			fx:SetNormal(muzzleDir)
+			fx:SetAttachment(weapon.MuzzleAttachment)
+
+			util.Effect(pending.name, fx)
+			if pending.smoke then
+				util.Effect("m9kr_muzzlesmoke", fx)
+			end
+		end
+	end
+
+	-- Process remaining pending shell eject (model had no QC EjectBrass events)
+	if weapon.m9kr_PendingShellEject then
+		weapon.m9kr_PendingShellEject = nil
+		if weapon.EjectShell then
+			weapon:EjectShell()
+		end
 	end
 end)
 
@@ -1038,8 +1113,14 @@ function SWEP:GetViewModelPosition(pos, ang)
 		local ct = CurTime()
 
 		-- Update animation time ONLY if not paused (this freezes breathing animation)
+		-- Guard with FrameNumber to prevent double-advancement in MP
+		-- (GetViewModelPosition can be called during both prediction and render)
 		if not isPaused then
-			self.AnimationTime = self.AnimationTime + ft
+			local curFrame = FrameNumber()
+			if self.m9kr_LastAnimFrame ~= curFrame then
+				self.m9kr_LastAnimFrame = curFrame
+				self.AnimationTime = self.AnimationTime + ft
+			end
 		end
 
 		-- Track camera rotation velocity for view turning tilt

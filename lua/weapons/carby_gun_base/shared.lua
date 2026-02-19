@@ -542,12 +542,9 @@ function SWEP:Deploy()
 end
  
 function SWEP:Holster()
-	-- Clean up burst timer when holstering
-	local timerName = "M9K_Burst_" .. self:EntIndex()
-	if timer.Exists(timerName) then
-		timer.Remove(timerName)
-	end
+	-- Clean up burst state when holstering
 	self.BurstShotsRemaining = 0
+	self.NextBurstShotTime = nil
 	
 	-- Cancel any active reload timers to prevent ammo being added after weapon switch
 	local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
@@ -729,8 +726,9 @@ function SWEP:FireBurstShot()
 	self:ShootBulletInformation()
 	self.Weapon:TakePrimaryAmmo(1)
 
-	-- Track shot time for ADS recoil animation
-	if CLIENT then
+	-- Track shot time for ADS recoil animation and low ammo warning
+	-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
+	if CLIENT or (game.SinglePlayer() and SERVER) then
 		self.LastShotTime = CurTime()
 		self:CheckLowAmmo()
 	end
@@ -776,56 +774,18 @@ function SWEP:FireBurstShot()
 		end
 	end
 	
-	-- Effects
-	local fx = EffectData()
-	fx:SetEntity(self.Weapon)
-	fx:SetOrigin(self.Owner:GetShootPos())
-
-	-- Get muzzle direction from worldmodel attachment (for proper third-person alignment)
-	local muzzleDir = self.Owner:GetAimVector()  -- Default to aim direction
-	local att = self.Weapon:GetAttachment(self.Weapon:LookupAttachment(self.MuzzleAttachment or "1"))
-	if att and att.Ang then
-		muzzleDir = att.Ang:Forward()  -- Use actual barrel direction from worldmodel
-	end
-
-	fx:SetNormal(muzzleDir)
-	fx:SetAttachment(self.MuzzleAttachment)
-
-	-- Spawn muzzle flash effect
-	if GetConVar("M9KR_MuzzleFlash") ~= nil and GetConVar("M9KR_MuzzleFlash"):GetBool() then
-		if CLIENT or (game.SinglePlayer() and SERVER) then
-			-- Smart muzzle flash: use silenced effect if weapon is suppressed
-			local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
-			if self.Silenced and self.MuzzleFlashEffectSilenced then
-				effectName = self.MuzzleFlashEffectSilenced
-			end
-			util.Effect(effectName, fx)
-
-			-- Spawn muzzle smoke trail
-			local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
-			if smokeCvar and smokeCvar:GetInt() == 1 then
-				util.Effect("m9kr_muzzlesmoke", fx)
-			end
-		end
-	end
-
+	-- Muzzle flash and shell eject (deferred in MP for correct attachment positions)
+	self:M9KR_SpawnMuzzleFlash()
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
-
-	-- Eject shell casing
-	self:EjectShell()
+	self:M9KR_SpawnShellEject()
 
 	-- Schedule next burst shot if any remaining
 	-- Safety check: BurstShotsRemaining can be nil if weapon was switched mid-burst
 	if not self.BurstShotsRemaining then return end
 	self.BurstShotsRemaining = self.BurstShotsRemaining - 1
 	if self.BurstShotsRemaining > 0 then
-		-- Use unique timer name per weapon instance
-		local timerName = "M9K_Burst_" .. self:EntIndex()
-		timer.Create(timerName, self.BurstDelay or 0.05, 1, function()
-			if IsValid(self) then
-				self:FireBurstShot()
-			end
-		end)
+		-- Schedule next shot via Think() (timers don't survive MP prediction)
+		self.NextBurstShotTime = CurTime() + (self.BurstDelay or 0.05)
 	end
 end
 
@@ -869,8 +829,9 @@ function SWEP:PrimaryAttack()
 				self:ShootBulletInformation()
 				self.Weapon:TakePrimaryAmmo(1)
 
-				-- Track shot time for ADS recoil animation
-				if CLIENT then
+				-- Track shot time for ADS recoil animation and low ammo warning
+				-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
+				if CLIENT or (game.SinglePlayer() and SERVER) then
 					self.LastShotTime = CurTime()
 					self:CheckLowAmmo()
 				end
@@ -901,51 +862,14 @@ function SWEP:PrimaryAttack()
 						end
 						self:EmitSound(self.Primary.Sound or "")
 				end
-				local fx = EffectData()
-				fx:SetEntity(self.Weapon)
-				fx:SetOrigin(self.Owner:GetShootPos())
-
-				-- Get muzzle direction from worldmodel attachment (for proper third-person alignment)
-				local muzzleDir = self.Owner:GetAimVector()
-				local att = self.Weapon:GetAttachment(self.Weapon:LookupAttachment(self.MuzzleAttachment or "1"))
-				if att and att.Ang then
-					muzzleDir = att.Ang:Forward()
-				end
-
-				fx:SetNormal(muzzleDir)
-				fx:SetAttachment(self.MuzzleAttachment)
-
-				-- Spawn muzzle flash effect
-				if GetConVar("M9KR_MuzzleFlash") ~= nil and GetConVar("M9KR_MuzzleFlash"):GetBool() then
-					if CLIENT or (game.SinglePlayer() and SERVER) then
-						-- Smart muzzle flash: use silenced effect if weapon is suppressed
-						local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
-						if self.Silenced and self.MuzzleFlashEffectSilenced then
-							effectName = self.MuzzleFlashEffectSilenced
-						end
-						util.Effect(effectName, fx)
-
-						-- Spawn muzzle smoke trail
-						local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
-						if smokeCvar and smokeCvar:GetInt() == 1 then
-							util.Effect("m9kr_muzzlesmoke", fx)
-						end
-					end
-				end
-
+				-- Muzzle flash and shell eject (deferred in MP for correct attachment positions)
+				self:M9KR_SpawnMuzzleFlash()
 				self.Owner:SetAnimation(PLAYER_ATTACK1)
-			
-				-- Eject shell casing
-				self:EjectShell()
+				self:M9KR_SpawnShellEject()
 
-				-- Schedule remaining burst shots using named timer per weapon instance
+				-- Schedule remaining burst shots via Think() (timers don't survive MP prediction)
 				if self.BurstShotsRemaining > 0 then
-					local timerName = "M9K_Burst_" .. self:EntIndex()
-					timer.Create(timerName, self.BurstDelay or 0.05, 1, function()
-						if IsValid(self) then
-							self:FireBurstShot()
-						end
-					end)
+					self.NextBurstShotTime = CurTime() + (self.BurstDelay or 0.05)
 				end
 
 				-- Time before next trigger pull with tick interval compensation (BurstTriggerPull is now in seconds)
@@ -977,8 +901,9 @@ function SWEP:PrimaryAttack()
 					self.ChamberRound = false
 				end
 				
-			-- Track shot time for ADS recoil animation
-			if CLIENT then
+			-- Track shot time for ADS recoil animation and low ammo warning
+			-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
+			if CLIENT or (game.SinglePlayer() and SERVER) then
 				self.LastShotTime = CurTime()
 				self:CheckLowAmmo()
 			end
@@ -1009,42 +934,10 @@ function SWEP:PrimaryAttack()
 					end
 					self:EmitSound(self.Primary.Sound)
 				end
-				local fx = EffectData()
-				fx:SetEntity(self.Weapon)
-				fx:SetOrigin(self.Owner:GetShootPos())
-
-				-- Get muzzle direction from worldmodel attachment (for proper third-person alignment)
-				local muzzleDir = self.Owner:GetAimVector()
-				local att = self.Weapon:GetAttachment(self.Weapon:LookupAttachment(self.MuzzleAttachment or "1"))
-				if att and att.Ang then
-					muzzleDir = att.Ang:Forward()
-				end
-
-				fx:SetNormal(muzzleDir)
-				fx:SetAttachment(self.MuzzleAttachment)
-
-				-- Spawn muzzle flash effect
-				if GetConVar("M9KR_MuzzleFlash") ~= nil and GetConVar("M9KR_MuzzleFlash"):GetBool() then
-					if CLIENT or (game.SinglePlayer() and SERVER) then
-						-- Smart muzzle flash: use silenced effect if weapon is suppressed
-						local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
-						if self.Silenced and self.MuzzleFlashEffectSilenced then
-							effectName = self.MuzzleFlashEffectSilenced
-						end
-						util.Effect(effectName, fx)
-
-						-- Spawn muzzle smoke trail
-						local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
-						if smokeCvar and smokeCvar:GetInt() == 1 then
-							util.Effect("m9kr_muzzlesmoke", fx)
-						end
-					end
-				end
-
+				-- Muzzle flash and shell eject (deferred in MP for correct attachment positions)
+				self:M9KR_SpawnMuzzleFlash()
 				self.Owner:SetAnimation(PLAYER_ATTACK1)
-
-				-- Eject shell casing
-				self:EjectShell()
+				self:M9KR_SpawnShellEject()
 
 				-- Set fire rate timing with tick interval compensation (CRITICAL for RPM control)
 				-- This ensures accurate fire rates on low tickrate servers
@@ -1089,6 +982,63 @@ function SWEP:PrimaryAttack()
 end
 
 --[[
+	Deferred Effect System
+	In multiplayer, viewmodel attachment positions are unreliable during CLIENT prediction
+	because SetupBones hasn't run yet. Effects are queued and created during render time
+	(FireAnimationEvent or PostDrawViewModel) when positions are accurate.
+	In singleplayer, SERVER creates effects immediately (CLIENT prediction may not run
+	weapon attack functions in SP mode).
+]]
+
+function SWEP:M9KR_SpawnMuzzleFlash()
+	local mfCvar = GetConVar("M9KR_MuzzleFlash")
+	if not mfCvar or not mfCvar:GetBool() then return end
+
+	local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
+	if self.Silenced and self.MuzzleFlashEffectSilenced then
+		effectName = self.MuzzleFlashEffectSilenced
+	end
+
+	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
+	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
+
+	-- SP SERVER: create effects immediately (engine sends to client)
+	if game.SinglePlayer() and SERVER then
+		local fx = EffectData()
+		fx:SetEntity(self.Weapon)
+		fx:SetOrigin(self.Owner:GetShootPos())
+		fx:SetNormal(self.Owner:GetAimVector())
+		fx:SetAttachment(self.MuzzleAttachment)
+		util.Effect(effectName, fx)
+		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx) end
+		return
+	end
+
+	-- MP CLIENT: queue for render time (attachment positions unreliable during prediction)
+	if CLIENT then
+		if not IsFirstTimePredicted() then return end
+		self.m9kr_PendingMuzzleFlash = {name = effectName, smoke = doSmoke}
+	end
+end
+
+function SWEP:M9KR_SpawnShellEject()
+	if self.NoShellEject then return end
+	if not CLIENT then return end
+	if not IsValid(self) or not IsValid(self.Owner) then return end
+	if self.Owner ~= LocalPlayer() then return end
+	if not self.ShellModel then return end
+
+	-- SP: EjectShell is triggered by FireAnimationEvent when the fire animation's
+	-- QC EjectBrass event fires (see game.SinglePlayer() check there).
+	-- No need to queue here — the animation event handles timing.
+	if game.SinglePlayer() then return end
+
+	-- MP: queue for render time (attachment positions unreliable during prediction)
+	if not IsFirstTimePredicted() then return end
+	self.m9kr_PendingShellEject = true
+end
+
+--[[
 	Shell Ejection System
 	Ejects physical shell casing models from the weapon's shell eject attachment
 
@@ -1108,8 +1058,9 @@ function SWEP:EjectShell()
 	local vm = self.Owner:GetViewModel()
 	if not IsValid(vm) then return end
 
-	-- Resolve shell eject attachment: QC-cached > weapon property > default 2
-	local attachmentId = self._qcShellAttachment or tonumber(self.ShellEjectAttachment) or 2
+	-- Resolve shell eject attachment: weapon property > QC-cached > default 2
+	-- Weapon config takes priority over QC data since the developer explicitly set it
+	local attachmentId = tonumber(self.ShellEjectAttachment) or self._qcShellAttachment or 2
 
 	-- Get attachment position from viewmodel
 	local attachment = vm:GetAttachment(attachmentId)
@@ -1138,7 +1089,25 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 	-- Event 5011 = DoD:S muzzle flash
 	-- Event 5021 = TF2 muzzle flash
 	-- Event 6001 = Attachment-based muzzle flash
-	if event == 21 or event == 22 or event == 5001 or event == 5011 or event == 5021 or event == 6001 then return true end
+	if event == 21 or event == 22 or event == 5001 or event == 5011 or event == 5021 or event == 6001 then
+		-- MP deferred effect: create muzzle flash now with animation-accurate position
+		if CLIENT and self.m9kr_PendingMuzzleFlash then
+			local pending = self.m9kr_PendingMuzzleFlash
+			self.m9kr_PendingMuzzleFlash = nil
+
+			local fx = EffectData()
+			fx:SetEntity(self.Weapon)
+			fx:SetOrigin(pos)
+			fx:SetNormal(ang:Forward())
+			fx:SetAttachment(self.MuzzleAttachment)
+
+			util.Effect(pending.name, fx)
+			if pending.smoke then
+				util.Effect("m9kr_muzzlesmoke", fx)
+			end
+		end
+		return true
+	end
 
 	-- Block all EjectBrass events from weapon model QCs
 	-- Event 20 = Brass ejection event in GMod/Source Engine
@@ -1158,6 +1127,14 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 				-- This auto-detects the shell eject attachment from the viewmodel's animation data
 				if parts[2] then
 					self._qcShellAttachment = tonumber(parts[2])
+				end
+
+				-- Create shell eject now (vm:GetAttachment is reliable during render)
+				-- SP: always eject when fire animation plays (no pending flag needed)
+				-- MP: only eject when the pending flag was set during prediction
+				if self.m9kr_PendingShellEject or game.SinglePlayer() then
+					self.m9kr_PendingShellEject = nil
+					self:EjectShell()
 				end
 			end
 			return true -- Block default Source Engine brass (EjectShell is called from firing code)
@@ -2238,34 +2215,59 @@ function SWEP:Think()
 	end
 	self.LastTriggerState = triggerDown
 
+	-- Burst fire: process queued shots via CurTime check (prediction-safe, unlike timers)
+	if self.BurstShotsRemaining and self.BurstShotsRemaining > 0 and self.NextBurstShotTime and CurTime() >= self.NextBurstShotTime then
+		self:FireBurstShot()
+	end
+
 	-- Store viewmodel reference for muzzle flash effects (TFA Base approach)
 	if CLIENT and IsValid(self.Owner) and self.Owner == LocalPlayer() then
 		self.OwnerViewModel = self.Owner:GetViewModel()
 
 		-- Update weapon input state (ADS, sprint, safety, reload, FOV transitions)
+		-- Safe to call multiple times per frame (uses CurTime-based transitions, not deltas)
 		self:UpdateWeaponInputState()
 
-		-- Update progress values (TFA-style approach - lightweight float lerp only, no heavy logic)
-		self:UpdateProgressRatios()
+		-- Guard FrameTime-based updates against multiple calls per frame
+		-- In multiplayer, Think() can run multiple times per frame during prediction,
+		-- which would double-advance FrameTime-accumulated values
+		local curFrame = FrameNumber()
+		if self.m9kr_LastProgressFrame ~= curFrame then
+			self.m9kr_LastProgressFrame = curFrame
+
+			-- Update progress values (TFA-style approach - lightweight float lerp only, no heavy logic)
+			self:UpdateProgressRatios()
+		end
 
 		-- Belt-fed weapon display update (bone/bodygroup belt depletion + reload animation)
 		self:UpdateBeltAmmo()
 	end
 
 	-- TFA-Style Recoil Decay System
+	-- Guard against double-advancement on CLIENT during prediction
 	local ft = FrameTime()
-	
+	local shouldDecayRecoil = true
+	if CLIENT then
+		local curFrame = FrameNumber()
+		if self.m9kr_LastDecayFrame == curFrame then
+			shouldDecayRecoil = false
+		end
+		self.m9kr_LastDecayFrame = curFrame
+	end
+
 	-- Smoothly update IronSights progress for recoil interpolation
 	local isInADS = CLIENT and (self.m9kr_IsInADS or false) or false
 	local targetProgress = isInADS and 1.0 or 0.0
 	self.IronSightsProgressSmooth = self.IronSightsProgressSmooth or 0
-	self.IronSightsProgressSmooth = Lerp(ft * 8, self.IronSightsProgressSmooth, targetProgress)
-	
+	if shouldDecayRecoil then
+		self.IronSightsProgressSmooth = Lerp(ft * 8, self.IronSightsProgressSmooth, targetProgress)
+	end
+
 	-- Decay ViewPunch accumulator over time
-	if self.ViewPunchP then
+	if shouldDecayRecoil and self.ViewPunchP then
 		self.ViewPunchP = Lerp(ft * 5, self.ViewPunchP, 0)
 	end
-	if self.ViewPunchY then
+	if shouldDecayRecoil and self.ViewPunchY then
 		self.ViewPunchY = Lerp(ft * 5, self.ViewPunchY, 0)
 	end
 
