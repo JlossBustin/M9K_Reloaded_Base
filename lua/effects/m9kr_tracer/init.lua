@@ -71,7 +71,7 @@ function EFFECT:Init(data)
 			weaponEnt = owent:GetActiveWeapon()
 			if not IsValid(weaponEnt) then return end
 		else
-			-- First person - check if scoped (weapon.isScoped set by m9kr_weapon_state_handler)
+			-- First person - check if scoped (weapon.isScoped set by UpdateWeaponInputState)
 			if IsValid(weaponEntOG) and weaponEntOG.isScoped then
 				-- Scoped weapon while ADS - use player's eye position for accurate tracer
 				useEyePos = true

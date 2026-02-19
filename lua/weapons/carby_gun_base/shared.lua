@@ -61,7 +61,6 @@ SWEP.DisableBulletImpacts = false -- Disable per-bullet impact effects (prevents
 SWEP.SoundIndicatorInterval = nil -- Play fire sound every N shots instead of every shot (nil = every shot)
 
 -- Action sounds to stop on holster (draw, reload, bolt sounds, etc. - NOT fire sounds)
--- Weapons should override this with their specific action sound names
 -- Example: SWEP.ActionSounds = {"M9KR_MA5C.Draw", "M9KR_MA5C.Reload", "M9KR_MA5C.Reload_Empty"}
 SWEP.ActionSounds = {}
 
@@ -121,22 +120,7 @@ SWEP.CrouchAng = Vector(0, 0, -7)
 -- Low ammo sound system (TFA-style)
 SWEP.LowAmmoSoundThreshold = 0.33 -- Play low ammo sound when below 33% of clip
 
--- Low ammo sounds and ADS sounds are now handled by centralized CLIENT files:
--- - lua/m9kr/client/m9kr_low_ammo_warning.lua
--- - lua/m9kr/client/m9kr_weapon_state_handler.lua
-
--- Animation variables (clientside)
-if CLIENT then
-	SWEP.AnimationTime = 0 -- Time tracker for animations
-	SWEP.BreathIntensity = 0 -- Smooth breath intensity
-	SWEP.WalkIntensity = 0 -- Smooth walk intensity
-	SWEP.SprintIntensity = 0 -- Smooth sprint intensity
-	SWEP.JumpVelocity = 0 -- Vertical velocity for jump tracking
-	SWEP.JumpVelocitySmooth = 0 -- Smoothed vertical velocity
-	SWEP.LateralVelocity = 0 -- Horizontal velocity for tilt
-	SWEP.LateralVelocitySmooth = 0 -- Smoothed lateral velocity
-	SWEP.LastGroundState = true -- Track if player was on ground last frame
-end
+-- Client-only animation variables, low ammo, ADS/sprint/FOV state are in cl_init.lua
  
 local PainMulti = 1
  
@@ -396,30 +380,7 @@ function SWEP:Initialize()
 	end
 end
 
---[[
-	DrawWeaponSelection - Draw weapon icon in weapon selection HUD
-	CLIENT-side only. Loads material lazily on first call.
-]]--
-function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
-	if not CLIENT then return end
-
-	-- Lazy load icon material if not already loaded
-	if not self.WepSelectIconMat and self.Gun then
-		self.WepSelectIconMat = Material("vgui/hud/" .. self.Gun)
-	end
-
-	-- Draw if we have a valid material (not error material)
-	if self.WepSelectIconMat and not self.WepSelectIconMat:IsError() then
-		surface.SetDrawColor(255, 255, 255, alpha)
-		surface.SetMaterial(self.WepSelectIconMat)
-
-		y = y + 10
-		x = x + 10
-		wide = wide - 20
-
-		surface.DrawTexturedRect(x, y, wide, wide * 0.5)
-	end
-end
+-- DrawWeaponSelection is in cl_init.lua
 
 
 function SWEP:Equip()
@@ -474,6 +435,21 @@ function SWEP:Deploy()
 		self.LastGroundState = true
 		self.ADSRecoilIntensity = 0 -- For tracking ADS recoil animation
 		self.LastShotTime = 0 -- Track when last shot was fired
+
+		-- Weapon input state (ADS, sprint, FOV transitions)
+		self.m9kr_IsInADS = false
+		self.m9kr_IsInSprint = false
+		self.m9kr_FOVCurrent = 0
+		self.m9kr_FOVStart = 0
+		self.m9kr_FOVTarget = 0
+		self.m9kr_FOVTransitionStart = 0
+		self.m9kr_FOVTransitionDuration = 0.2
+		self.m9kr_LastUseState = false
+		self.m9kr_LastAttack2State = false
+		self.m9kr_LastReloadState = false
+		self.m9kr_LastSafetyState = false
+		self.m9kr_Attack2HeldDuringSprint = false
+		self.ShouldDrawViewModel = true
 	end
 	
 	-- Handle first deploy vs subsequent deploys
@@ -606,10 +582,16 @@ function SWEP:Holster()
 
 	if CLIENT and IsValid(self.Owner) and not self.Owner:IsNPC() then
 		local vm = self.Owner:GetViewModel()
-		if IsValid(vm) and M9KR and M9KR.ViewModelMods then
-			M9KR.ViewModelMods.ResetBonePositions(vm)
+		if IsValid(vm) then
+			self:ResetViewModelBones(vm)
 		end
 
+		-- Reset weapon input state so next weapon starts clean
+		self.m9kr_FOVCurrent = 0
+		self.m9kr_FOVTarget = 0
+		self.m9kr_IsInADS = false
+		self.m9kr_IsInSprint = false
+		self.ShouldDrawViewModel = true
 	end
 
 	-- Stop action sounds (draw, reload, bolt, etc.) when switching weapons
@@ -659,8 +641,8 @@ function SWEP:OnRemove()
 	
 	if CLIENT and IsValid(self.Owner) and not self.Owner:IsNPC() then
 		local vm = self.Owner:GetViewModel()
-		if IsValid(vm) and M9KR and M9KR.ViewModelMods then
-			M9KR.ViewModelMods.ResetBonePositions(vm)
+		if IsValid(vm) then
+			self:ResetViewModelBones(vm)
 		end
 
 	end
@@ -745,13 +727,12 @@ function SWEP:FireBurstShot()
 	
 	-- Fire the shot
 	self:ShootBulletInformation()
-	-- Low ammo sound handled by m9kr_low_ammo_warning.lua
 	self.Weapon:TakePrimaryAmmo(1)
-	
+
 	-- Track shot time for ADS recoil animation
 	if CLIENT then
 		self.LastShotTime = CurTime()
-
+		self:CheckLowAmmo()
 	end
 	
 	-- Determine fire animation based on ADS state
@@ -886,13 +867,12 @@ function SWEP:PrimaryAttack()
 				
 				-- Fire first shot immediately
 				self:ShootBulletInformation()
-				-- Low ammo sound handled by m9kr_low_ammo_warning.lua
 				self.Weapon:TakePrimaryAmmo(1)
 
 				-- Track shot time for ADS recoil animation
 				if CLIENT then
 					self.LastShotTime = CurTime()
-
+					self:CheckLowAmmo()
 				end
 
 				-- Determine fire animation based on ADS state and available sequences
@@ -988,9 +968,6 @@ function SWEP:PrimaryAttack()
 			-- Normal single-shot path (existing behavior)
 			else
 				self:ShootBulletInformation()
-
-				-- Low ammo sound handled by m9kr_low_ammo_warning.lua
-
 				self.Weapon:TakePrimaryAmmo(1)
 				
 				-- Mark that we fired from the chamber
@@ -1003,7 +980,7 @@ function SWEP:PrimaryAttack()
 			-- Track shot time for ADS recoil animation
 			if CLIENT then
 				self.LastShotTime = CurTime()
-
+				self:CheckLowAmmo()
 			end
 
 			-- Determine fire animation based on ADS state and available sequences
@@ -1115,7 +1092,7 @@ end
 	Shell Ejection System
 	Ejects physical shell casing models from the weapon's shell eject attachment
 
-	NOTE: Shell collision sounds are handled by m9kr_shell_ejection.lua and m9kr_shell effect.
+	NOTE: Shell collision sounds are handled by the m9kr_shell effect.
 	No need for duplicate sound tables in weapon base.
 ]]
 function SWEP:EjectShell()
@@ -1241,11 +1218,9 @@ function SWEP:ShootBulletInformation()
 
 	-- Check ADS state on both CLIENT and SERVER
 	local isInADS = false
-	if CLIENT and M9KR and M9KR.WeaponState and M9KR.WeaponState.GetVisualState then
-		-- CLIENT: Use visual state for smooth transitions
-		isInADS = M9KR.WeaponState.GetVisualState(self)
+	if CLIENT then
+		isInADS = self.m9kr_IsInADS or false
 	elseif SERVER then
-		-- SERVER: Directly detect ADS conditions (ironsights networked var is not set by weapon state handler)
 		local isReloading = self.Weapon:GetNWBool("Reloading", false)
 		local isSafe = self.GetIsOnSafe and self:GetIsOnSafe() or false
 		local isOnGround = self.Owner:IsOnGround()
@@ -1632,7 +1607,7 @@ function SWEP:Reload()
 			end
 		end
 
-		-- FOV managed by m9kr_weapon_state_handler.lua
+		-- FOV managed by UpdateWeaponInputState/CalcView
 		self:SetIronsights(false)
 
 		-- Handle the +1 ammo after animation completes
@@ -1698,7 +1673,7 @@ function SWEP:Reload()
 	if SERVER and IsValid(self.Weapon) then
 		if self.Weapon:Clip1() < self.Primary.ClipSize and not self.Owner:IsNPC() then
 			-- When the current clip < full clip and the rest of your ammo > 0, then
-			-- FOV managed by m9kr_weapon_state_handler.lua
+			-- FOV managed by UpdateWeaponInputState/CalcView
 			-- Zoom = 0
 			self:SetIronsights(false)
 			-- Set the ironsight to false
@@ -1752,7 +1727,7 @@ function SWEP:Reload()
 					if self.Weapon:GetNextPrimaryFire() <= (CurTime() + 0.03) then
 						self.Weapon:SetNextPrimaryFire(CurTime() + 0.3)
 					end
-					-- FOV managed by m9kr_weapon_state_handler.lua
+					-- FOV managed by UpdateWeaponInputState/CalcView
 					self:SetIronsights(false)
 					
 					-- Delay sprint transition for smoother feel
@@ -1781,7 +1756,7 @@ function SWEP:Reload()
 					return
 				end
 				if self.Scoped == false then
-					-- FOV managed by m9kr_weapon_state_handler.lua
+					-- FOV managed by UpdateWeaponInputState/CalcView
 					self:SetSprint(false)
 					self:SetIronsights(true, self.Owner)
 				else
@@ -1789,7 +1764,7 @@ function SWEP:Reload()
 				end
 			else
 				if SERVER then
-					-- FOV managed by m9kr_weapon_state_handler.lua
+					-- FOV managed by UpdateWeaponInputState/CalcView
 					self:SetIronsights(false, self.Owner)
 					self:SetSprint(false)
 				end
@@ -1804,7 +1779,7 @@ function SWEP:PostReloadScopeCheck()
 		if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
 				if CLIENT then return end
 				if self.Scoped == false then
-						-- FOV managed by m9kr_weapon_state_handler.lua
+						-- FOV managed by UpdateWeaponInputState/CalcView
 						self:SetSprint(false)
 						self:SetIronsights(true, self.Owner)
 						self.DrawCrosshair = false
@@ -1814,7 +1789,7 @@ function SWEP:PostReloadScopeCheck()
 				if self.Weapon:GetNextPrimaryFire() <= (CurTime() + .03) then
 						self.Weapon:SetNextPrimaryFire(CurTime()+0.3)
 				end
-				-- FOV managed by m9kr_weapon_state_handler.lua
+				-- FOV managed by UpdateWeaponInputState/CalcView
 				self:SetIronsights(false)
 				self:SetSprint(true)
 		else return end
@@ -1856,7 +1831,7 @@ function SWEP:Silencer()
 	if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
 	-- Exit iron sights for attachment animation
-	-- FOV managed by m9kr_weapon_state_handler.lua
+	-- FOV managed by UpdateWeaponInputState/CalcView
 	self:SetIronsights(false)
 
 	-- Store original hold type before changing to passive
@@ -1930,7 +1905,7 @@ function SWEP:Silencer()
 		if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
 			if CLIENT then return end
 			if self.Scoped == false then
-				-- FOV managed by m9kr_weapon_state_handler.lua
+				-- FOV managed by UpdateWeaponInputState/CalcView
 				self:SetSprint(false)
 				self:SetIronsights(true, self.Owner)
 				self.DrawCrosshair = false
@@ -1940,7 +1915,7 @@ function SWEP:Silencer()
 			if self.Weapon:GetNextPrimaryFire() <= (CurTime() + 0.3) then
 				self.Weapon:SetNextPrimaryFire(CurTime() + 0.3)
 			end
-			-- FOV managed by m9kr_weapon_state_handler.lua
+			-- FOV managed by UpdateWeaponInputState/CalcView
 			self:SetIronsights(false)
 			self:SetSprint(true)
 		end
@@ -1994,7 +1969,7 @@ function SWEP:SafetyToggle()
 		self.Weapon:EmitSound("Weapon_AR2.Empty")
 
 		-- Exit ADS/sprint visually
-		-- FOV managed by m9kr_weapon_state_handler.lua
+		-- FOV managed by UpdateWeaponInputState/CalcView
 		self:SetIronsights(false)
 		self:SetSprint(false)
 
@@ -2110,11 +2085,14 @@ function SWEP:SelectFireMode()
 	self:EmitSound("Weapon_AR2.Empty")
 end
  
+-- ADS sounds, FOV transitions, UpdateWeaponInputState, M9KR_StartFOVTransition, M9KR_GetADSTargetFOV are in cl_init.lua
+
+-- CalcView is in cl_init.lua
+
 -- IronSight
 --[[
 IronSight - Simplified gun_base variant
-Input handling and FOV managed by m9kr_weapon_state_handler.lua
-This function now only handles SERVER-side game logic and CLIENT-side animation state
+This function handles SERVER-side game logic and CLIENT-side animation state
 ]]
 function SWEP:IronSight()
 	if not IsValid(self) or not IsValid(self.Owner) then
@@ -2182,12 +2160,8 @@ function SWEP:IronSight()
 	end
 
 	-- BobScale/SwayScale management - reduced when in ADS
-	-- Check CLIENT-side ADS state from m9kr_weapon_state_handler.lua
-	-- Block ADS bob reduction when on safety or holding USE key
-	local isInADS = false
-	if CLIENT and M9KR and M9KR.WeaponState and M9KR.WeaponState.GetVisualState then
-		isInADS = M9KR.WeaponState.GetVisualState(self)
-	end
+	-- Check CLIENT-side ADS state from UpdateWeaponInputState
+	local isInADS = CLIENT and (self.m9kr_IsInADS or false) or false
 
 	if isInADS and self.Owner:KeyDown(IN_ATTACK2) and not self.Owner:KeyDown(IN_USE) and not self:GetIsOnSafe() and not self.Owner:KeyDown(IN_SPEED) then
 		self.SwayScale = 0.05
@@ -2198,81 +2172,51 @@ function SWEP:IronSight()
 	end
 end
  
---[[
-	UpdateProgressRatios - TFA-style lightweight progress value updates
+-- UpdateProgressRatios is in cl_init.lua
 
-	This function ONLY updates 4 float values (IronSightsProgress, SprintProgress, SafetyProgress, CrouchProgress)
-	using simple math.Approach lerping. No heavy logic, no state detection, just smooth transitions.
-	This is identical to TFA's CalculateRatios approach.
+--[[
+	UpdateSafetyHoldType - Enforce hold type based on safety state
+	Runs on BOTH client and server. SetHoldType is networked, so server
+	changes are visible to all clients automatically.
+	Replaces the former global CLIENT Think hook (safety handler)
 ]]--
-if CLIENT then
-	local function mathApproach(current, target, delta)
-		delta = math.abs(delta)
-		if current < target then
-			return math.min(current + delta, target)
-		else
-			return math.max(current - delta, target)
+function SWEP:UpdateSafetyHoldType()
+	if not self.GetIsOnSafe then return end
+
+	local isSafe = self:GetIsOnSafe()
+
+	-- Determine target hold type
+	if isSafe then
+		-- Safety engaged: use passive/normal depending on weapon type
+		local safeHoldType = "passive"
+		if self.OriginalHoldType == "pistol" or self.OriginalHoldType == "revolver" then
+			safeHoldType = "normal"
+		end
+		if self.HoldType ~= safeHoldType then
+			self:SetHoldType(safeHoldType)
+		end
+	else
+		-- Safety off: restore original hold type
+		local targetHoldType = self.OriginalHoldType or "ar2"
+		if self.HoldType ~= targetHoldType then
+			self:SetHoldType(targetHoldType)
 		end
 	end
 
-	function SWEP:UpdateProgressRatios()
-		-- Get visual states from m9kr_weapon_state_handler.lua
-		local bIron, bSprint = false, false
-		if M9KR and M9KR.WeaponState and M9KR.WeaponState.GetVisualState then
-			bIron, bSprint = M9KR.WeaponState.GetVisualState(self)
+	-- CLIENT: Track transition start time for smooth viewmodel animation
+	if CLIENT then
+		if self.m9kr_LastSafetyHoldTypeState == nil then
+			self.m9kr_LastSafetyHoldTypeState = isSafe
+		elseif self.m9kr_LastSafetyHoldTypeState ~= isSafe then
+			self.m9kr_SafetyTransitionStart = CurTime()
+			self.m9kr_LastSafetyHoldTypeState = isSafe
 		end
-		local bSafe = self:GetIsOnSafe()
-		local bCrouching = self.Owner:KeyDown(IN_DUCK) or self.Owner:Crouching()
-		local bReloading = self.Weapon:GetNWBool("Reloading", false)
-
-		-- Initialize progress values if they don't exist
-		self.IronSightsProgress = self.IronSightsProgress or 0
-		self.SprintProgress = self.SprintProgress or 0
-		self.SafetyProgress = self.SafetyProgress or 0
-		self.CrouchProgress = self.CrouchProgress or 0
-
-		local ft = FrameTime()
-
-		-- Calculate targets
-		-- When reloading, use idle positioning (not sprint) - player can still move with walking bob/tilt
-		local ironTarget = (bIron and not bSafe) and 1 or 0
-		local sprintTarget = (bSprint and not bSafe and not bIron and not bReloading) and 1 or 0
-		local safetyTarget = bSafe and 1 or 0
-		local crouchTarget = bCrouching and 1 or 0
-
-		-- Calculate speeds (must match IRONSIGHT_TIME)
-		local IRONSIGHT_TIME = 0.8
-		local adsTransitionSpeed = 12.5 / (IRONSIGHT_TIME / 0.3)
-		local sprintTransitionSpeed = 7.5
-		local safetyTransitionSpeed = 12.5 / ((IRONSIGHT_TIME * 0.5) / 0.3)
-		local crouchTransitionSpeed = 2.5
-
-		-- Update progress values using TFA-style approach (simple float lerping)
-		self.IronSightsProgress = mathApproach(
-			self.IronSightsProgress,
-			ironTarget,
-			(ironTarget - self.IronSightsProgress) * ft * adsTransitionSpeed
-		)
-
-		self.SprintProgress = mathApproach(
-			self.SprintProgress,
-			sprintTarget,
-			(sprintTarget - self.SprintProgress) * ft * sprintTransitionSpeed
-		)
-
-		self.SafetyProgress = mathApproach(
-			self.SafetyProgress,
-			safetyTarget,
-			(safetyTarget - self.SafetyProgress) * ft * safetyTransitionSpeed
-		)
-
-		self.CrouchProgress = mathApproach(
-			self.CrouchProgress,
-			crouchTarget,
-			(crouchTarget - self.CrouchProgress) * ft * crouchTransitionSpeed
-		)
 	end
 end
+
+-- GetSafetyTransitionMul, ApplyViewModelBoneMods, and ResetViewModelBones are in cl_init.lua
+
+-- Belt-fed, low ammo, shell ejection, bullet impact, and PreDrawViewModel hook are in cl_init.lua
 
 -- Think
 function SWEP:Think()
@@ -2298,19 +2242,21 @@ function SWEP:Think()
 	if CLIENT and IsValid(self.Owner) and self.Owner == LocalPlayer() then
 		self.OwnerViewModel = self.Owner:GetViewModel()
 
+		-- Update weapon input state (ADS, sprint, safety, reload, FOV transitions)
+		self:UpdateWeaponInputState()
+
 		-- Update progress values (TFA-style approach - lightweight float lerp only, no heavy logic)
 		self:UpdateProgressRatios()
+
+		-- Belt-fed weapon display update (bone/bodygroup belt depletion + reload animation)
+		self:UpdateBeltAmmo()
 	end
 
 	-- TFA-Style Recoil Decay System
 	local ft = FrameTime()
 	
 	-- Smoothly update IronSights progress for recoil interpolation
-	-- Check CLIENT-side ADS state from m9kr_weapon_state_handler.lua
-	local isInADS = false
-	if CLIENT and M9KR and M9KR.WeaponState and M9KR.WeaponState.GetVisualState then
-		isInADS = M9KR.WeaponState.GetVisualState(self)
-	end
+	local isInADS = CLIENT and (self.m9kr_IsInADS or false) or false
 	local targetProgress = isInADS and 1.0 or 0.0
 	self.IronSightsProgressSmooth = self.IronSightsProgressSmooth or 0
 	self.IronSightsProgressSmooth = Lerp(ft * 8, self.IronSightsProgressSmooth, targetProgress)
@@ -2367,14 +2313,13 @@ function SWEP:Think()
 	-- Update ground state tracker
 	self.LastGroundState = isOnGround
 
-	-- ALL ADS/Sprint state management is now handled by m9kr_weapon_state_handler.lua (CLIENT)
-	-- The weapon base no longer detects key input or manages these networked variables
+	-- ADS/Sprint state management is handled by UpdateWeaponInputState (CLIENT)
+
+	-- Safety hold type enforcement (runs on both CLIENT and SERVER)
+	self:UpdateSafetyHoldType()
 
 	self:IronSight()
 end
-
--- GetViewModelPosition
-local IRONSIGHT_TIME = 0.8 -- Time to enter in the ironsight mode
 
 /*---------------------------------------------------------
    Name: SWEP:GetDynamicSpread()
@@ -2399,12 +2344,9 @@ local HIP_SPREAD = {
 function SWEP:GetDynamicSpread()
 	-- Check ADS state on both CLIENT and SERVER
 	local isADS = false
-	if CLIENT and M9KR and M9KR.WeaponState and M9KR.WeaponState.GetVisualState then
-		-- CLIENT: Use visual state for smooth transitions
-		local isInADS = M9KR.WeaponState.GetVisualState(self)
-		isADS = isInADS and self.Owner:KeyDown(IN_ATTACK2)
+	if CLIENT then
+		isADS = (self.m9kr_IsInADS or false) and self.Owner:KeyDown(IN_ATTACK2)
 	elseif SERVER and IsValid(self.Owner) then
-		-- SERVER: Directly detect ADS conditions (same logic as ShootBulletInformation)
 		local isReloading = self.Weapon:GetNWBool("Reloading", false)
 		local isSafe = self.GetIsOnSafe and self:GetIsOnSafe() or false
 		local isOnGround = self.Owner:IsOnGround()
@@ -2490,527 +2432,7 @@ function SWEP:GetDynamicSpread()
 	return HIP_SPREAD[currentMode] or 0.01
 end
 
--- GetViewModelPosition
-local IRONSIGHT_TIME = 0.8 -- Time to enter in the ironsight mode
-
-function SWEP:GetViewModelPosition(pos, ang)
-	-- Critical safety checks for weapon state transitions and menu interactions
-	if not IsValid(self) or not IsValid(self.Weapon) then
-		return pos, ang
-	end
-	
-	-- Check if weapon is being removed or in invalid state
-	if not self.Weapon.GetClass or not self.Weapon:GetClass() then
-		return pos, ang
-	end
-	
-	-- Check if owner is valid
-	if not IsValid(self.Owner) or not self.Owner:IsPlayer() then
-		return pos, ang
-	end
-
-	-- Additional safety check for essential weapon properties
-	if not self.IronSightsPos then
-		return pos, ang
-	end
-	
-	-- Get current weapon states from CLIENT-side state handler (m9kr_weapon_state_handler.lua)
-	local bIron, bSprint = false, false
-	if CLIENT and M9KR and M9KR.WeaponState and M9KR.WeaponState.GetVisualState then
-		bIron, bSprint = M9KR.WeaponState.GetVisualState(self)
-	end
-	local bReloading = self.Weapon:GetNWBool("Reloading")
-	
-	-- Check if player is crouching OR holding crouch key (for smooth transitions)
-	local bCrouching = false
-	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		-- Use KeyDown for immediate response, fallback to Crouching() for full crouch state
-		bCrouching = self.Owner:KeyDown(IN_DUCK) or self.Owner:Crouching()
-	end
-	
-	if CLIENT then
-		self.bWasReloading = self.bWasReloading or false
-
-		if bReloading ~= self.bWasReloading then
-			if bReloading then
-				-- Reload started - hide crosshair
-				self.DrawCrosshair = false
-			elseif not bReloading then
-				-- Reload finished - restore crosshair based on current state
-				-- Check if weapon is in SAFE mode - crosshair should stay hidden
-				if self:GetIsOnSafe() then
-					self.DrawCrosshair = false
-				-- Check if player is ACTUALLY sprinting (SPEED key held and on ground)
-				elseif self.Owner:KeyDown(IN_SPEED) and self.Owner:IsOnGround() then
-					self.fSprintTime = CurTime()
-					self.bLastSprint = true
-					self.DrawCrosshair = false
-				elseif bIron then
-					self.fIronTime = CurTime()
-					self.bLastIron = true
-					if not self.ShowCrosshairInADS then
-						self.DrawCrosshair = false
-					end
-				else
-					self.DrawCrosshair = self.OrigCrossHair
-				end
-			end
-			self.bWasReloading = bReloading
-		end
-	end
-	
-	-- Ensure progress values exist (they are updated by UpdateProgressRatios in Think)
-	-- DO NOT reset these values - they persist across frames and menu opens/closes
-	if not self.IronSightsProgress then self.IronSightsProgress = 0 end
-	if not self.SprintProgress then self.SprintProgress = 0 end
-	if not self.SafetyProgress then self.SafetyProgress = 0 end
-	if not self.CrouchProgress then self.CrouchProgress = 0 end
-
-	-- Get safety state for later use
-	local bSafe = self:GetIsOnSafe()
-
-	-- Handle crosshair visibility based on state changes
-	if CLIENT then
-		local wasInADS = self.bLastIron or false
-		local wasInSprint = self.bLastSprint or false
-		local wasInSafety = self.bLastSafety or false
-
-		-- Track state changes for crosshair management
-		if bIron and not wasInADS then
-			if not self.ShowCrosshairInADS then
-				self.DrawCrosshair = false
-			end
-			self.bLastIron = true
-		elseif not bIron and wasInADS then
-			self.bLastIron = false
-			if not bSprint and not bSafe and not bReloading then
-				self.DrawCrosshair = self.OrigCrossHair
-			end
-		end
-
-		if bSprint and not wasInSprint then
-			self.DrawCrosshair = false
-			self.bLastSprint = true
-		elseif not bSprint and wasInSprint then
-			self.bLastSprint = false
-			if not bIron and not bSafe and not bReloading then
-				self.DrawCrosshair = self.OrigCrossHair
-			end
-		end
-
-		if bSafe and not wasInSafety then
-			self.DrawCrosshair = false
-			self.bLastSafety = true
-		elseif not bSafe and wasInSafety then
-			self.bLastSafety = false
-			if not bIron and not bSprint and not bReloading then
-				self.DrawCrosshair = self.OrigCrossHair
-			end
-		end
-	end
-
-	-- Calculate final multiplier using highest priority state
-	-- Safety > Sprint > ADS (matches TFA's priority system)
-	local Mul = math.max(self.SafetyProgress, self.SprintProgress, self.IronSightsProgress)
-	
-	-- Enhanced animations (clientside only)
-	if CLIENT and IsValid(self.Owner) and self.Owner:IsPlayer() then
-		-- Ensure variables are initialized
-		self.AnimationTime = self.AnimationTime or 0
-		self.BreathIntensity = self.BreathIntensity or 0
-		self.WalkIntensity = self.WalkIntensity or 0
-		self.SprintIntensity = self.SprintIntensity or 0
-		self.JumpVelocitySmooth = self.JumpVelocitySmooth or 0
-		self.LateralVelocitySmooth = self.LateralVelocitySmooth or 0
-		self.JumpIntensitySmooth = self.JumpIntensitySmooth or 0  -- Smooth jump transition intensity
-		self.LastEyeAngles = self.LastEyeAngles or self.Owner:EyeAngles()
-		self.CameraRotationVelocity = self.CameraRotationVelocity or 0
-
-		-- Detect fire mode changes on CLIENT (networked from SERVER)
-		local currentNetworkedMode = self.Weapon:GetNWInt("CurrentFireMode", 1)
-		self.LastNetworkedFireMode = self.LastNetworkedFireMode or currentNetworkedMode
-		if currentNetworkedMode ~= self.LastNetworkedFireMode then
-			-- Fire mode changed - trigger animation only for normal fire mode switches
-			-- Skip animation when toggling safety on/off (within 0.5s of safety toggle)
-			local recentSafetyToggle = self.SafetyToggleTime and (CurTime() - self.SafetyToggleTime) < 0.5
-			if not recentSafetyToggle and not self:GetIsOnSafe() then
-				self.FireModeSwitchTime = CurTime()
-			end
-			self.LastNetworkedFireMode = currentNetworkedMode
-		end
-
-		-- Check if game is paused (singleplayer)
-		-- In singleplayer, FrameTime() returns 0 when paused
-		local rawFrameTime = FrameTime()
-		local isPaused = (rawFrameTime == 0)
-
-		local ft = isPaused and 0.001 or math.Clamp(rawFrameTime, 0.001, 0.1) -- Prevent division by zero when menu opens
-		local ct = CurTime()
-
-		-- Update animation time ONLY if not paused (this freezes breathing animation)
-		if not isPaused then
-			self.AnimationTime = self.AnimationTime + ft
-		end
-
-		-- Track camera rotation velocity for view turning tilt
-		local currentEyeAngles = self.Owner:EyeAngles()
-		local angleDiff = currentEyeAngles.y - self.LastEyeAngles.y
-
-		-- Handle angle wrap-around (-180 to 180)
-		if angleDiff > 180 then
-			angleDiff = angleDiff - 360
-		elseif angleDiff < -180 then
-			angleDiff = angleDiff + 360
-		end
-
-		-- Calculate angular velocity (degrees per second)
-		-- Guard against division by zero (backup safety if ft somehow = 0)
-		local angularVelocity = ft > 0 and (angleDiff / ft) or 0
-		self.CameraRotationVelocity = Lerp(ft * 5, self.CameraRotationVelocity, angularVelocity)
-		self.LastEyeAngles = currentEyeAngles
-		
-		-- Get player movement states
-		local velocity = self.Owner:GetVelocity()
-		local speed = velocity:Length2D()
-		local isOnGround = self.Owner:IsOnGround()
-		local isJumping = not isOnGround and math.abs(velocity.z) > 10
-		
-		-- Check if player is pressing movement keys (for immediate sprint exit when keys released)
-		local isPressingMovement = self.Owner:KeyDown(IN_FORWARD) or self.Owner:KeyDown(IN_BACK) or self.Owner:KeyDown(IN_MOVELEFT) or self.Owner:KeyDown(IN_MOVERIGHT)
-
-		local isActuallySprinting = self.Owner:KeyDown(IN_SPEED) and speed > 50 and isOnGround and isPressingMovement
-		if self.JumpCancelsSprint and not isOnGround and (self.SprintJumping or false) then
-			isActuallySprinting = false
-		end
-
-		local isReloading = self.Weapon:GetNWBool("Reloading")
-
-		-- During reload: treat sprint as walk (idle positioning with walking bob/tilt, not sprint bob)
-		local isSprinting = isActuallySprinting and not isReloading
-		local isWalking = speed > 20 and (not isSprinting or isReloading) and isOnGround
-		local isShooting = self.Weapon:GetNextPrimaryFire() > ct - 0.15
-
-		local isADS = self.IronSightsProgress > 0.1
-		local targetBreath = (speed < 5 and not isShooting and not isReloading and isOnGround and not isADS) and 1 or 0
-		local targetWalk = isWalking and math.Clamp(speed / 200, 0, 1) or 0
-		local targetSprint = isSprinting and math.Clamp(speed / 250, 0, 1) or 0
-
-		-- Very smooth transitions to prevent jittering
-		local breathSpeed = ft * 2
-		local walkSpeed = ft * 6
-		local sprintSpeed = ft * 4
-
-		self.BreathIntensity = Lerp(breathSpeed, self.BreathIntensity, targetBreath)
-		self.WalkIntensity = Lerp(walkSpeed, self.WalkIntensity, targetWalk)
-		self.SprintIntensity = Lerp(sprintSpeed, self.SprintIntensity, targetSprint)
-
-		-- TFA-style jump velocity smoothing
-		local zVelocity = velocity.z
-		self.JumpVelocitySmooth = Lerp(ft * 7, self.JumpVelocitySmooth or 0, zVelocity)
-
-		-- Track lateral velocity for tilt animation
-		local eyeAng = self.Owner:EyeAngles()
-		local rightVec = eyeAng:Right()
-		rightVec.z = 0
-		rightVec:Normalize()
-		local lateralVel = velocity:Dot(rightVec)
-		self.LateralVelocitySmooth = Lerp(ft * 3, self.LateralVelocitySmooth, lateralVel)
-
-		-- Get local axes
-		local up = ang:Up()
-		local right = ang:Right()
-		local forward = ang:Forward()
-		local flip = self.ViewModelFlip and -1 or 1
-
-		-- Reduce animation intensity when aiming
-		local aimMult = 1 - self.IronSightsProgress * 0.85
-		
-		if self.BreathIntensity > 0.01 then
-			local breatheMult = self.BreathIntensity * aimMult
-			local breatheTime = self.AnimationTime * 1.5
-			
-			-- Subtle breathing motion
-			pos:Add(right * math.sin(breatheTime) * breatheMult * flip * 0.1)
-			pos:Add(up * math.cos(breatheTime * 0.5) * breatheMult * 0.06)
-			
-			-- Minimal rotation
-			ang:RotateAroundAxis(forward, math.sin(breatheTime) * breatheMult * flip * 0.5)
-		end
-		
-		if self.WalkIntensity > 0.01 then
-			local walkMult = self.WalkIntensity * aimMult
-			local walkTime = self.AnimationTime * 8
-			
-			-- Natural walking bob (reduced vertical bob by 3/4)
-			pos:Add(up * math.abs(math.sin(walkTime * 2)) * walkMult * 0.05)
-			pos:Add(right * math.sin(walkTime) * walkMult * flip * 0.25)
-			
-			-- Subtle walk sway
-			ang:RotateAroundAxis(right, -math.sin(walkTime * 2) * walkMult * 1.2)
-			ang:RotateAroundAxis(forward, math.sin(walkTime) * walkMult * flip * 1.5)
-		end
-		
-		if self.SprintIntensity > 0.01 then
-			local sprintMult = self.SprintIntensity
-			local sprintTime = self.AnimationTime * 9
-			
-			-- Sprint bob (reduced vertical by 3/4, faster than walk)
-			pos:Add(up * math.abs(math.sin(sprintTime * 2)) * sprintMult * 0.1)
-			pos:Add(right * math.sin(sprintTime) * sprintMult * flip * 0.3)
-			
-			-- Sprint sway (less aggressive)
-			ang:RotateAroundAxis(right, -math.sin(sprintTime * 2) * sprintMult * 2)
-			ang:RotateAroundAxis(forward, math.sin(sprintTime) * sprintMult * flip * 1.8)
-		end
-		
-		-- Clamp velocity to -1 to 1 range and convert to trigonometric angle
-		local trigX = -math.Clamp(self.JumpVelocitySmooth / 200, -1, 1) * math.pi / 2
-
-		-- Calculate raw jump intensity (reduced during ADS to minimize vertical movement)
-		-- When fully in ADS (IronSightsProgress=1), intensity is reduced to 15% (1 - 0.85 = 0.15)
-		local rawJumpIntensity = (3 + math.Clamp(math.abs(self.JumpVelocitySmooth) - 100, 0, 200) / 200 * 4) * (1 - self.IronSightsProgress * 0.85)
-
-		-- Smoothly lerp jump intensity for smooth transitions (handles repeated jumping)
-		-- Speed at ft*5 provides smooth initial rise without snappiness
-		local jumpIntensityTarget = isJumping and rawJumpIntensity or 0
-		self.JumpIntensitySmooth = Lerp(ft * 5, self.JumpIntensitySmooth, jumpIntensityTarget)
-
-		-- Use smoothed intensity for final application
-		local jumpIntensity = self.JumpIntensitySmooth
-
-		-- Reduce jump intensity when ADS on scoped weapons (minor movement, but still noticeable)
-		-- Normal weapons and non-ADS scoped weapons get full jump intensity
-		local isScopedWeapon = self.Base == "carby_scoped_base"
-		local scopedADSReduction = (isScopedWeapon and bIron) and 0.4 or 1.0
-		jumpIntensity = jumpIntensity * scopedADSReduction
-
-		-- TFA scale constant
-		local scale_r = -6
-
-		-- Calculate sine value for direction
-		local sinValue = math.sin(trigX)
-
-		-- When falling DOWN: trigX is positive, sinValue is positive -> gun moves inward/up
-		-- Reduce inward movement by 65% (keep 35%) to prevent excessive movement towards center screen
-		local isFalling = sinValue > 0
-		local fallReduction = isFalling and 0.35 or 1.0  -- 35% of normal when falling, 100% when jumping
-
-		-- Minimal jump movement when ADS (20% of normal jump for all components)
-		local adsJumpReduction = (self.IronSightsProgress > 0.1) and 0.20 or 1.0
-
-		/*	Apply sine-based movement for smooth arc motion
-			When jumping UP: Full movement (trigX negative, sinValue negative, fallReduction = 1.0)
-			When falling DOWN: 35% movement (trigX positive, sinValue positive, fallReduction = 0.35)
-			All jump components reduced to 20% when ADS for minimal movement */
-		pos:Add(right * sinValue * scale_r * 0.1 * jumpIntensity * flip * 0.4 * adsJumpReduction * fallReduction)
-		pos:Add(-up * sinValue * scale_r * 0.1 * jumpIntensity * 0.4 * adsJumpReduction * fallReduction)
-		ang:RotateAroundAxis(forward, sinValue * scale_r * jumpIntensity * flip * 0.4 * adsJumpReduction)
-
-		local xVelocityClamped = self.LateralVelocitySmooth
-
-		-- TFA's square root scaling for high velocities
-		if math.abs(xVelocityClamped) > 200 then
-			local sign = (xVelocityClamped < 0) and -1 or 1
-			xVelocityClamped = (math.sqrt((math.abs(xVelocityClamped) - 200) / 50) * 50 + 200) * sign
-		end
-
-		-- ADS tilt reduction: 70% reduction when fully in ADS (allows more tilt while maintaining sight alignment)
-		local adsTiltReduction = self.IronSightsProgress > 0.1 and (1 - self.IronSightsProgress * 0.70) or 1.0
-		local sprintTiltAmplification = 1.0
-		
-		-- Check if we're in the post-reload transition period (waiting to enter sprint)
-		local postReloadTransitionEnd = self.Weapon:GetNWFloat("PostReloadTransition", 0)
-		local inPostReloadTransition = CurTime() < postReloadTransitionEnd
-		
-		-- Amplify tilt during sprint (but NOT during reload - use walking tilt instead)
-		-- During reload: walking lateral tilt (sprintTiltAmplification = 1.0)
-		-- Reduced amplification from 2.0 to 0.5 to prevent excessive tilt
-		if not inPostReloadTransition and self.SprintIntensity > 0.1 and bSprint and not bReloading then
-			sprintTiltAmplification = 1 + self.SprintIntensity * 0.5
-		end
-		local baseTiltAmount = xVelocityClamped * 0.04 * flip * adsTiltReduction * sprintTiltAmplification
-
-		-- Add camera rotation tilt (when turning view while idle or ADS)
-		-- Camera turning right (positive angular velocity) = tilt right (positive angle)
-		-- Scale based on state: less in ADS to avoid misaligning iron sights
-		-- Reduced by 15% from original 0.015 to 0.01275
-		local cameraTiltScale = adsTiltReduction * 0.01275  -- Reduced intensity, scaled in ADS
-		local cameraTilt = self.CameraRotationVelocity * cameraTiltScale * flip
-
-		-- Combine lateral movement tilt and camera rotation tilt
-		local totalTilt = baseTiltAmount + cameraTilt
-
-		-- Apply tilt rotation
-		ang:RotateAroundAxis(forward, totalTilt)
-
-		-- Fire mode switch animation
-		-- 1) Gun moves slightly back
-		-- 2) At the same time, gun moves slightly up and slightly on a right angle
-		-- 3) Gun returns to default idle position
-		-- All movements happen together smoothly
-		if self.FireModeSwitchTime then
-			local switchElapsed = ct - self.FireModeSwitchTime
-			local totalDuration = 0.4  -- Smooth, not rushed
-
-			if switchElapsed < totalDuration then
-				local t = switchElapsed / totalDuration
-
-				-- Smooth sine curve: 0 -> 1 -> 0 over the duration
-				local intensity = math.sin(t * math.pi)
-
-				-- All movements happen simultaneously:
-				pos:Add(forward * intensity * -0.45)  -- Slightly back
-				pos:Add(up * intensity * 0.12)  -- Slightly up
-				ang:RotateAroundAxis(forward, intensity * 1.5 * flip)  -- Slight right angle (roll)
-			else
-				-- Animation complete
-				self.FireModeSwitchTime = nil
-			end
-		end
-	end
-
-	-- Early return if no active states and no crouch (all progress values at 0)
-	if Mul == 0 and self.CrouchProgress <= 0.001 then
-		return pos, ang
-	end
-
-	-- TFA-Style Position Calculation: Sequential LerpVector from base position
-	-- Start with base idle position (Vector 0,0,0)
-	local targetPos = Vector(0, 0, 0)
-	local targetAng = Vector(0, 0, 0)
-
-	-- Apply sprint/safety positioning (they use the same position)
-	-- SprintProgress handles smooth transitions automatically - no special reload logic needed
-	if self.SprintProgress > 0.01 or self.SafetyProgress > 0.01 then
-		local sprintSafetyProgress = math.max(self.SprintProgress, self.SafetyProgress)
-		local sprintPos = self.RunSightsPos or Vector(0, 0, 0)
-		local sprintAng = self.RunSightsAng or Vector(0, 0, 0)
-
-		targetPos = LerpVector(sprintSafetyProgress, targetPos, sprintPos)
-		targetAng = LerpVector(sprintSafetyProgress, targetAng, sprintAng)
-	end
-
-	-- Apply ADS positioning (overwrites sprint if active, following TFA's priority)
-	if self.IronSightsProgress > 0.02 then
-		local adsPos = self.SightsPos or Vector(0, 0, 0)
-		local adsAng = self.SightsAng or Vector(0, 0, 0)
-
-		-- Special handling for scoped weapons: push gun down and back slightly
-		-- Muzzle flash effects are spawned at a distinct position below the scope (handled in FireBurstShot)
-		if self.Scoped then
-			adsPos = Vector(adsPos.x, adsPos.y - 3, adsPos.z - 2)
-		end
-
-		targetPos = LerpVector(self.IronSightsProgress, targetPos, adsPos)
-		targetAng = LerpVector(self.IronSightsProgress, targetAng, adsAng)
-	end
-
-	-- Apply final position/angle offsets
-	if targetAng then
-		ang = ang * 1
-		ang:RotateAroundAxis(ang:Right(), targetAng.x)
-		ang:RotateAroundAxis(ang:Up(), targetAng.y)
-		ang:RotateAroundAxis(ang:Forward(), targetAng.z)
-	end
-
-	local Right = ang:Right()
-	local Up = ang:Up()
-	local Forward = ang:Forward()
-
-	pos = pos + targetPos.x * Right
-	pos = pos + targetPos.y * Forward
-	pos = pos + targetPos.z * Up
-	
-	-- TFA-Style Viewmodel Recoil Scaling
-	if CLIENT and IsValid(self.Owner) and self.Owner:IsPlayer() then
-		-- Allow complete disabling of viewmodel recoil when ADS (like TFA's cl_tfa_viewmodel_vp_enabled)
-		local enableViewmodelRecoil = self.ViewModelRecoilEnabled_IronSights
-		if enableViewmodelRecoil == nil then
-			enableViewmodelRecoil = true  -- Default: enabled
-		end
-
-		-- Get ViewPunch values (accumulated recoil)
-		local viewPunchP = self.ViewPunchP or 0
-		local viewPunchY = self.ViewPunchY or 0
-
-		-- Calculate scaled multipliers based on ADS state using IronSightsProgress
-		local pitchMult = Lerp(self.IronSightsProgress,
-			self.ViewModelPunchPitchMultiplier or 0.5,
-			enableViewmodelRecoil and 0.25 or 0)
-
-		local yawMult = Lerp(self.IronSightsProgress,
-			self.ViewModelPunchYawMultiplier or 0.5,
-			enableViewmodelRecoil and 0.25 or 0)
-
-		local verticalMult = Lerp(self.IronSightsProgress,
-			self.ViewModelPunch_VerticalMultiplier or 0.3,
-			enableViewmodelRecoil and 0.1 or 0)
-
-		local maxVerticalOffset = Lerp(self.IronSightsProgress,
-			self.ViewModelPunch_MaxVerticalOffset or 3,
-			enableViewmodelRecoil and 1 or 0)
-
-		-- Apply scaled rotation recoil
-		ang:RotateAroundAxis(ang:Right(), -viewPunchP * pitchMult)
-		ang:RotateAroundAxis(ang:Up(), viewPunchY * yawMult)
-
-		-- Apply scaled backward push (negative Y = backward)
-		local backwardPush = math.Clamp(viewPunchP * verticalMult, -maxVerticalOffset, maxVerticalOffset)
-		pos = pos - Forward * backwardPush
-	end
-
-	-- Apply crouch positioning offset with smooth ADS transition
-	if self.CrouchPos and self.CrouchAng and self.CrouchProgress > 0.001 then
-		-- Additional safety checks for weapon state transitions
-		if not IsValid(self) or not IsValid(self.Weapon) then
-			return pos, ang
-		end
-
-		-- Ensure owner is still valid (weapon switching can invalidate this)
-		if not IsValid(self.Owner) or not self.Owner:IsPlayer() then
-			return pos, ang
-		end
-
-		-- Ensure all required variables exist to prevent crashes
-		if not self.CrouchPos.x or not self.CrouchPos.y or not self.CrouchPos.z then
-			return pos, ang
-		end
-		if not self.CrouchAng.x or not self.CrouchAng.y or not self.CrouchAng.z then
-			return pos, ang
-		end
-		if not ang or not ang.Right or not ang.Forward or not ang.Up then
-			return pos, ang
-		end
-
-		local offset = Vector(self.CrouchPos.x, self.CrouchPos.y, self.CrouchPos.z)
-		local angleOffset = Angle(self.CrouchAng.x, self.CrouchAng.y, self.CrouchAng.z)
-
-		-- Apply crouch progress for smooth transitions
-		offset = offset * self.CrouchProgress
-		angleOffset = angleOffset * self.CrouchProgress
-
-		-- Smoothly fade out crouch positioning when transitioning to ADS
-		-- IronSightsProgress = 0 (not in ADS) -> full crouch offset
-		-- IronSightsProgress = 1 (fully in ADS) -> no crouch offset
-		local adsFadeMultiplier = 1 - self.IronSightsProgress
-		offset = offset * adsFadeMultiplier
-		angleOffset = angleOffset * adsFadeMultiplier
-
-		-- Safely transform the offset by the view angle
-		if ang and ang.Right and ang.Forward and ang.Up then
-			local rightVec = ang:Right()
-			local forwardVec = ang:Forward()
-			local upVec = ang:Up()
-
-			if rightVec and forwardVec and upVec then
-				pos = pos + rightVec * offset.x + forwardVec * offset.y + upVec * offset.z
-				ang = ang + angleOffset
-			end
-		end
-	end
-
-	return pos, ang
-end
+-- GetViewModelPosition is in cl_init.lua
  
 /*---------------------------------------------------------
 SetIronsights
@@ -3018,8 +2440,8 @@ SetIronsights
 function SWEP:SetIronsights(b)
 	-- NOTE: This function is kept for compatibility with existing weapon code (e.g., bolt action reload)
 	-- but the networked variable is NO LONGER USED for visual state.
-	-- Visual ADS state is now managed by m9kr_weapon_state_handler.lua CLIENT-side only.
-	-- ADS sounds are also played by the state handler, not here.
+	-- Visual ADS state is managed by UpdateWeaponInputState CLIENT-side.
+	-- ADS sounds are also played there, not here.
 	self.Weapon:SetNWBool("M9K_Ironsights", b)
 end
  
@@ -3136,186 +2558,4 @@ function SWEP:CycleFireMode()
 end
  
  
-if CLIENT then
- 	-- World model rendering with bone-relative offset positioning
-	function SWEP:DrawWorldModel()
-		local pl = self:GetOwner()
-
-		if IsValid(pl) then
-			local boneIndex = pl:LookupBone("ValveBiped.Bip01_R_Hand")
-			if boneIndex then
-				local pos, ang = pl:GetBonePosition(boneIndex)
-
-				-- Apply positional offset
-				pos = pos + ang:Forward() * self.Offset.Pos.Forward +
-							ang:Right() * self.Offset.Pos.Right +
-							ang:Up() * self.Offset.Pos.Up
-
-				-- Apply rotational offset
-				ang:RotateAroundAxis(ang:Up(), self.Offset.Ang.Up)
-				ang:RotateAroundAxis(ang:Right(), self.Offset.Ang.Right)
-				ang:RotateAroundAxis(ang:Forward(), self.Offset.Ang.Forward)
-
-				-- Cache scale-corrected attachment positions for muzzle flash effects
-				-- When Scale != 1, EnableMatrix("RenderMultiply") scales the visual model
-				-- around the render origin (pos). GetAttachment returns unscaled bonemerge
-				-- positions, so we scale the vector from render origin to attachment to
-				-- match where the muzzle visually appears on the scaled model.
-				local wmScale = self.Offset.Scale or 1
-				if wmScale ~= 1 then
-					self.WMCorrectedAttachments = {}
-					for i = 1, 4 do
-						local attach = self:GetAttachment(i)
-						if attach and attach.Pos then
-							local corrPos = pos + (attach.Pos - pos) * wmScale
-							self.WMCorrectedAttachments[i] = { Pos = corrPos, Ang = attach.Ang }
-						end
-					end
-				else
-					self.WMCorrectedAttachments = nil
-				end
-
-				-- For models with $bonemerge, temporarily disable it so SetRenderOrigin works
-				local wasBoneMerged = self:IsEffectActive(EF_BONEMERGE)
-				if wasBoneMerged then
-					self:RemoveEffects(EF_BONEMERGE)
-				end
-
-				self:SetRenderOrigin(pos)
-				self:SetRenderAngles(ang)
-
-				-- Apply scale if specified
-				local scale = self.Offset.Scale or 1
-				if scale ~= 1 then
-					local matrix = Matrix()
-					matrix:Scale(Vector(scale, scale, scale))
-					self:EnableMatrix("RenderMultiply", matrix)
-				end
-
-				-- Apply WorldModelBoneMods if they exist
-				local appliedBones = {}
-				if self.WorldModelBoneMods then
-					for boneName, boneData in pairs(self.WorldModelBoneMods) do
-						local boneIdx = self:LookupBone(boneName)
-						if boneIdx then
-							-- Apply bone manipulations
-							if boneData.scale then
-								self:ManipulateBoneScale(boneIdx, boneData.scale)
-							end
-							if boneData.pos then
-								self:ManipulateBonePosition(boneIdx, boneData.pos)
-							end
-							if boneData.angle then
-								self:ManipulateBoneAngles(boneIdx, boneData.angle)
-							end
-							-- Track which bones were modified for cleanup
-							appliedBones[boneIdx] = true
-						end
-					end
-				end
-
-				self:DrawModel()
-
-				-- Reset WorldModelBoneMods
-				for boneIdx, _ in pairs(appliedBones) do
-					self:ManipulateBoneScale(boneIdx, Vector(1, 1, 1))
-					self:ManipulateBonePosition(boneIdx, Vector(0, 0, 0))
-					self:ManipulateBoneAngles(boneIdx, Angle(0, 0, 0))
-				end
-
-				-- Reset scale
-				if scale ~= 1 then
-					self:DisableMatrix("RenderMultiply")
-				end
-
-				-- Re-enable bonemerge if it was active before
-				if wasBoneMerged then
-					self:AddEffects(EF_BONEMERGE)
-				end
-			end
-		else
-			-- Weapon is dropped - render at default position
-			self:SetRenderOrigin(nil)
-			self:SetRenderAngles(nil)
-
-			-- Apply WorldModelBoneMods if they exist
-			local appliedBones = {}
-			if self.WorldModelBoneMods then
-				for boneName, boneData in pairs(self.WorldModelBoneMods) do
-					local boneIdx = self:LookupBone(boneName)
-					if boneIdx then
-						-- Apply bone manipulations
-						if boneData.scale then
-							self:ManipulateBoneScale(boneIdx, boneData.scale)
-						end
-						if boneData.pos then
-							self:ManipulateBonePosition(boneIdx, boneData.pos)
-						end
-						if boneData.angle then
-							self:ManipulateBoneAngles(boneIdx, boneData.angle)
-						end
-						-- Track which bones were modified for cleanup
-						appliedBones[boneIdx] = true
-					end
-				end
-			end
-
-			self:DrawModel()
-
-			-- Reset WorldModelBoneMods
-			for boneIdx, _ in pairs(appliedBones) do
-				self:ManipulateBoneScale(boneIdx, Vector(1, 1, 1))
-				self:ManipulateBonePosition(boneIdx, Vector(0, 0, 0))
-				self:ManipulateBoneAngles(boneIdx, Angle(0, 0, 0))
-			end
-		end
-	end
-
-	-- Hide default GMod HUD elements when using M9K:R HUD
-	-- This prevents the default ammo/health HUD from showing
-	local M9KR_HudHide = {
-		CHudAmmo = true,
-		CHudSecondaryAmmo = true,
-		CHudHealth = true
-	}
-
-	function SWEP:HUDShouldDraw(name)
-		-- Only hide if M9K:R HUD is enabled
-		if M9KR_HudHide[name] and GetConVar("m9kr_hud_mode"):GetInt() == 1 then
-			return false
-		end
-	end
-
-	-- Suppress default GMod ammo HUD when using default HUD mode
-	-- The clip count already includes the chambered round from tactical reload
-	function SWEP:DrawAmmo()
-		return true
-	end
-
-	/**************************
-			Global utility code
-	**************************/
-
-	-- // Fully copies the table, meaning all tables inside this table are copied too and so on (normal table.Copy copies only their reference).
-	-- // Does not copy entities of course, only copies their reference.
-	-- // WARNING: do not use on tables that contain themselves somewhere down the line or you'll get an infinite loop
-	function table.FullCopy( tab )
-
-		if (!tab) then return nil end
-		
-		local res = {}
-		for k, v in pairs( tab ) do
-				if (type(v) == "table") then
-						res[k] = table.FullCopy(v) --// recursion ho!
-				elseif (type(v) == "Vector") then
-						res[k] = Vector(v.x, v.y, v.z)
-				elseif (type(v) == "Angle") then
-						res[k] = Angle(v.p, v.y, v.r)
-				else
-						res[k] = v
-				end
-		end
-		
-		return res   
-	end
-end
+-- DrawWorldModel, HUD functions, and table.FullCopy are in cl_init.lua

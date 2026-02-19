@@ -66,7 +66,7 @@ function EFFECT:Init(data)
 
 	local angpos = self.WeaponEnt:GetAttachment(self.Attachment)
 
-	-- Check if weapon is scoped in ADS (weapon.isScoped set by m9kr_weapon_state_handler)
+	-- Check if weapon is scoped in ADS (weapon.isScoped set by UpdateWeaponInputState)
 	-- When scoped, use fallback position below scope crosshair
 	local isScoped = IsValid(self.WeaponEntOG) and self.WeaponEntOG.isScoped
 	local isFirstPerson = IsValid(owent) and owent:IsPlayer() and owent == LocalPlayer() and not owent:ShouldDrawLocalPlayer()

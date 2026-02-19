@@ -197,8 +197,8 @@ function SWEP:Initialize()
 		-- Initialize view model bone build function
 		if IsValid(self.Owner) and self.Owner:IsPlayer() and self.Owner:Alive() then
 			local vm = self.Owner:GetViewModel()
-			if IsValid(vm) and M9KR and M9KR.ViewModelMods then
-				M9KR.ViewModelMods.ResetBonePositions(vm)
+			if IsValid(vm) then
+				self:ResetViewModelBones(vm)
 				-- Initialize viewmodel visibility
 				if self.ShowViewModel == nil or self.ShowViewModel then
 					vm:SetColor(Color(255, 255, 255, 255))
@@ -613,6 +613,7 @@ function SWEP:PrimaryAttack()
 
 				if CLIENT then
 					self.LastShotTime = CurTime()
+					self:CheckLowAmmo()
 				end
 
 				local bIron = self.Owner:KeyDown(IN_ATTACK2)
@@ -740,6 +741,10 @@ function SWEP:Think()
 		self:ShootBulletInformation()
 		self:TakePrimaryAmmo(1)
 
+		if CLIENT then
+			self:CheckLowAmmo()
+		end
+
 		local bIron = self.Owner:KeyDown(IN_ATTACK2)
 
 		if self.Silenced then
@@ -811,10 +816,7 @@ function SWEP:Think()
 	local ft = FrameTime()
 
 	-- Smoothly update IronSights progress for recoil interpolation
-	local isInADS = false
-	if CLIENT and M9KR and M9KR.WeaponState and M9KR.WeaponState.GetVisualState then
-		isInADS = M9KR.WeaponState.GetVisualState(self)
-	end
+	local isInADS = CLIENT and (self.m9kr_IsInADS or false) or false
 	local targetProgress = isInADS and 1.0 or 0.0
 	self.IronSightsProgressSmooth = self.IronSightsProgressSmooth or 0
 	self.IronSightsProgressSmooth = Lerp(ft * 8, self.IronSightsProgressSmooth, targetProgress)
@@ -866,6 +868,9 @@ function SWEP:Think()
 
 	-- Update ground state tracker
 	self.LastGroundState = isOnGround
+
+	-- Safety hold type enforcement (runs on both CLIENT and SERVER)
+	self:UpdateSafetyHoldType()
 
 	self:IronSight()
 end
@@ -989,10 +994,8 @@ function SWEP:Holster()
 			-- Reset viewmodel playback rate
 			vm:SetPlaybackRate(1.0)
 
-			-- Reset viewmodel bones (from parent gun_base)
-			if M9KR and M9KR.ViewModelMods then
-				M9KR.ViewModelMods.ResetBonePositions(vm)
-			end
+			-- Reset viewmodel bones
+			self:ResetViewModelBones(vm)
 		end
 	end
 
@@ -1088,10 +1091,8 @@ function SWEP:OnRemove()
 	if CLIENT and IsValid(self.Owner) and not self.Owner:IsNPC() then
 		local vm = self.Owner:GetViewModel()
 		if IsValid(vm) then
-			-- Reset viewmodel bones (from parent gun_base)
-			if M9KR and M9KR.ViewModelMods then
-				M9KR.ViewModelMods.ResetBonePositions(vm)
-			end
+			-- Reset viewmodel bones
+			self:ResetViewModelBones(vm)
 		end
 	end
 end
@@ -1277,7 +1278,7 @@ function SWEP:Reload()
     self.Owner:SetAnimation(PLAYER_RELOAD)
 
     if SERVER then
-        -- FOV managed by m9kr_weapon_state_handler.lua
+        -- FOV managed by UpdateWeaponInputState/CalcView
         self:SetIronsights(false)
     end
 
@@ -1584,19 +1585,4 @@ function SWEP:CancelReload()
     end
 end
 
-if CLIENT then
-	-- Hide default GMod HUD elements when using M9K:R HUD
-	-- This prevents the default ammo/health HUD from showing
-	local M9KR_HudHide = {
-		CHudAmmo = true,
-		CHudSecondaryAmmo = true,
-		CHudHealth = true
-	}
-
-	function SWEP:HUDShouldDraw(name)
-		-- Only hide if M9K:R HUD is enabled
-		if M9KR_HudHide[name] and GetConVar("m9kr_hud_mode"):GetInt() == 1 then
-			return false
-		end
-	end
-end
+-- HUDShouldDraw is in cl_init.lua

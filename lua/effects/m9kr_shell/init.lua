@@ -207,15 +207,10 @@ function EFFECT:Init(data)
 end
 
 function EFFECT:BounceSound()
-	-- Use centralized sound parameters from M9KR.ShellEjection if available
-	local soundLevel = M9KR.ShellEjection and M9KR.ShellEjection.SoundLevel or self.SoundLevel
-	local soundPitch = M9KR.ShellEjection and M9KR.ShellEjection.SoundPitch or self.SoundPitch
-	local soundVolume = M9KR.ShellEjection and M9KR.ShellEjection.SoundVolume or self.SoundVolume
-
 	sound.Play(self.ImpactSound, self:GetPos(),
-	           math.Rand(soundLevel[1], soundLevel[2]),
-	           math.Rand(soundPitch[1], soundPitch[2]),
-	           math.Rand(soundVolume[1], soundVolume[2]))
+	           math.Rand(self.SoundLevel[1], self.SoundLevel[2]),
+	           math.Rand(self.SoundPitch[1], self.SoundPitch[2]),
+	           math.Rand(self.SoundVolume[1], self.SoundVolume[2]))
 end
 
 function EFFECT:PhysicsCollide(data)

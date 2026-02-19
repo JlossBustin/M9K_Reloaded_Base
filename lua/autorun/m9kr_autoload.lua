@@ -86,16 +86,8 @@ if SERVER then
 	AddCSLuaFile("m9kr/client/m9kr_particles.lua")
 	AddCSLuaFile("m9kr/client/m9kr_muzzleflash_dynlight.lua")
 	AddCSLuaFile("m9kr/client/m9kr_muzzleflash_scotch.lua")
-	AddCSLuaFile("m9kr/client/m9kr_safety_handler.lua")
-	AddCSLuaFile("m9kr/client/m9kr_suppressor_handler.lua")
-	AddCSLuaFile("m9kr/client/m9kr_viewmodel_mods.lua")
-	AddCSLuaFile("m9kr/client/m9kr_low_ammo_warning.lua")
-	AddCSLuaFile("m9kr/client/m9kr_shell_ejection.lua")
-	AddCSLuaFile("m9kr/client/m9kr_weapon_state_handler.lua")
 	AddCSLuaFile("m9kr/client/m9kr_hud.lua")
 	AddCSLuaFile("m9kr/client/m9kr_muzzle_heatwave.lua")
-	AddCSLuaFile("m9kr/client/m9kr_bullet_impact.lua")
-	AddCSLuaFile("m9kr/client/m9kr_belt_fed.lua")
 end
 
 -- ============================================================================
@@ -123,16 +115,8 @@ if CLIENT then
 	include("m9kr/client/m9kr_particles.lua")
 	include("m9kr/client/m9kr_muzzleflash_dynlight.lua")
 	include("m9kr/client/m9kr_muzzleflash_scotch.lua")
-	include("m9kr/client/m9kr_safety_handler.lua")
-	include("m9kr/client/m9kr_suppressor_handler.lua")
-	include("m9kr/client/m9kr_viewmodel_mods.lua")
-	include("m9kr/client/m9kr_low_ammo_warning.lua")
-	include("m9kr/client/m9kr_shell_ejection.lua")
-	include("m9kr/client/m9kr_weapon_state_handler.lua")
 	include("m9kr/client/m9kr_hud.lua")
 	include("m9kr/client/m9kr_muzzle_heatwave.lua")
-	include("m9kr/client/m9kr_bullet_impact.lua")
-	include("m9kr/client/m9kr_belt_fed.lua")
 end
 
 print("[M9K:R] All M9K Reloaded systems loaded successfully")
