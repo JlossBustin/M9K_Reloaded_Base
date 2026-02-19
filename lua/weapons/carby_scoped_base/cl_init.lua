@@ -33,7 +33,6 @@ function SWEP:GetScopeSway()
 	end
 
 	-- Initialize animation variables
-	self.AnimationTime = self.AnimationTime or 0
 	self.BreathIntensity = self.BreathIntensity or 0
 	self.WalkIntensity = self.WalkIntensity or 0
 	self.SprintIntensity = self.SprintIntensity or 0
@@ -49,10 +48,8 @@ function SWEP:GetScopeSway()
 	local ft = isPaused and 0.001 or math.Clamp(rawFrameTime, 0, 0.1)
 	local ct = CurTime()
 
-	-- Update animation time ONLY if not paused (this freezes breathing animation)
-	if not isPaused then
-		self.AnimationTime = self.AnimationTime + ft
-	end
+	-- Use CurTime() directly as the animation clock (same as gun_base)
+	local animTime = CurTime()
 
 	local velocity = self.Owner:GetVelocity()
 	local speed = velocity:Length2D()
@@ -116,7 +113,7 @@ function SWEP:GetScopeSway()
 	-- Walking bob (very slow frequency, increased scale for visible movement through scope)
 	if self.WalkIntensity > 0.01 then
 		local walkMult = self.WalkIntensity * aimMult
-		local walkTime = self.AnimationTime * 2.5  -- Slow horizontal sway frequency
+		local walkTime = animTime * 2.5  -- Slow horizontal sway frequency
 
 		-- Vertical bob - slower frequency (reduced multiplier) for smoother up/down movement
 		swayY = swayY + math.abs(math.sin(walkTime * 1.25)) * walkMult * 0.05 * 180  -- Reduced from *1.5 to *1.25 for slower vertical
@@ -128,7 +125,7 @@ function SWEP:GetScopeSway()
 	-- Sprint bob (slower frequency, increased scale for visible movement)
 	if self.SprintIntensity > 0.01 then
 		local sprintMult = self.SprintIntensity
-		local sprintTime = self.AnimationTime * 3.5  -- Slow horizontal sway frequency
+		local sprintTime = animTime * 3.5  -- Slow horizontal sway frequency
 
 		-- Vertical bob - slower frequency (reduced multiplier) for smoother up/down movement
 		swayY = swayY + math.abs(math.sin(sprintTime * 1.25)) * sprintMult * 0.1 * 180  -- Reduced from *1.5 to *1.25 for slower vertical

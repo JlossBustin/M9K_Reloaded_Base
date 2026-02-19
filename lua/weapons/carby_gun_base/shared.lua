@@ -730,7 +730,7 @@ function SWEP:FireBurstShot()
 	-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
 	if CLIENT or (game.SinglePlayer() and SERVER) then
 		self.LastShotTime = CurTime()
-		self:CheckLowAmmo()
+		if self.CheckLowAmmo then self:CheckLowAmmo() end
 	end
 	
 	-- Determine fire animation based on ADS state
@@ -833,7 +833,7 @@ function SWEP:PrimaryAttack()
 				-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
 				if CLIENT or (game.SinglePlayer() and SERVER) then
 					self.LastShotTime = CurTime()
-					self:CheckLowAmmo()
+					if self.CheckLowAmmo then self:CheckLowAmmo() end
 				end
 
 				-- Determine fire animation based on ADS state and available sequences
@@ -905,7 +905,7 @@ function SWEP:PrimaryAttack()
 			-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
 			if CLIENT or (game.SinglePlayer() and SERVER) then
 				self.LastShotTime = CurTime()
-				self:CheckLowAmmo()
+				if self.CheckLowAmmo then self:CheckLowAmmo() end
 			end
 
 			-- Determine fire animation based on ADS state and available sequences
@@ -1017,7 +1017,7 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	-- MP CLIENT: queue for render time (attachment positions unreliable during prediction)
 	if CLIENT then
 		if not IsFirstTimePredicted() then return end
-		self.m9kr_PendingMuzzleFlash = {name = effectName, smoke = doSmoke}
+		self.m9kr_PendingMuzzleFlash = {name = effectName, smoke = doSmoke, time = CurTime()}
 	end
 end
 
@@ -1028,14 +1028,15 @@ function SWEP:M9KR_SpawnShellEject()
 	if self.Owner ~= LocalPlayer() then return end
 	if not self.ShellModel then return end
 
-	-- SP: EjectShell is triggered by FireAnimationEvent when the fire animation's
-	-- QC EjectBrass event fires (see game.SinglePlayer() check there).
-	-- No need to queue here — the animation event handles timing.
-	if game.SinglePlayer() then return end
-
-	-- MP: queue for render time (attachment positions unreliable during prediction)
-	if not IsFirstTimePredicted() then return end
+	-- Queue for render time. In both SP and MP, the pending flag is consumed by:
+	-- 1. FireAnimationEvent (event 20 / EjectBrass) — if the model has QC events
+	-- 2. PostDrawViewModel fallback — if the model lacks QC events (TFA-ported models)
+	-- In SP, FireAnimationEvent also ejects unconditionally via game.SinglePlayer() check,
+	-- so models WITH QC events will eject there and clear the flag. Models WITHOUT QC events
+	-- will fall through to PostDrawViewModel where the flag gets consumed.
+	if not game.SinglePlayer() and not IsFirstTimePredicted() then return end
 	self.m9kr_PendingShellEject = true
+	self.m9kr_PendingShellEjectTime = CurTime()
 end
 
 --[[
@@ -1058,9 +1059,10 @@ function SWEP:EjectShell()
 	local vm = self.Owner:GetViewModel()
 	if not IsValid(vm) then return end
 
-	-- Resolve shell eject attachment: weapon property > QC-cached > default 2
-	-- Weapon config takes priority over QC data since the developer explicitly set it
-	local attachmentId = tonumber(self.ShellEjectAttachment) or self._qcShellAttachment or 2
+	-- Resolve shell eject attachment: QC-cached > weapon property > default 2
+	-- QC data is authoritative (parsed from the model's animation events, always correct for the model)
+	-- Weapon config ShellEjectAttachment is a fallback for models without QC EjectBrass events
+	local attachmentId = self._qcShellAttachment or tonumber(self.ShellEjectAttachment) or 2
 
 	-- Get attachment position from viewmodel
 	local attachment = vm:GetAttachment(attachmentId)
@@ -1091,6 +1093,8 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 	-- Event 6001 = Attachment-based muzzle flash
 	if event == 21 or event == 22 or event == 5001 or event == 5011 or event == 5021 or event == 6001 then
 		-- MP deferred effect: create muzzle flash now with animation-accurate position
+		-- Track that this model has QC muzzle events (prevents PostDrawViewModel fallback)
+		if CLIENT then self.m9kr_HasQCMuzzleEvent = true end
 		if CLIENT and self.m9kr_PendingMuzzleFlash then
 			local pending = self.m9kr_PendingMuzzleFlash
 			self.m9kr_PendingMuzzleFlash = nil
@@ -1110,35 +1114,35 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 	end
 
 	-- Block all EjectBrass events from weapon model QCs
-	-- Event 20 = Brass ejection event in GMod/Source Engine
-	if event == 20 then
-		-- Check if this is a brass ejection effect
-		local optStr = tostring(options or "")
-		if string.find(optStr, "EjectBrass") then
-			if CLIENT then
-				-- Parse QC parameters to cache the correct shell eject attachment
-				-- Format: "EjectBrass_556 2 110" → <effect_name> <attachment_id> <velocity>
-				local parts = {}
-				for part in string.gmatch(optStr, "%S+") do
-					table.insert(parts, part)
-				end
+	local optStr = tostring(options or "")
+	if string.find(optStr, "EjectBrass") then
+		if CLIENT then
+			-- Track that this model has QC shell events (prevents PostDrawViewModel fallback)
+			self.m9kr_HasQCShellEvent = true
 
-				-- Cache the QC attachment ID so EjectShell() uses the correct position
-				-- This auto-detects the shell eject attachment from the viewmodel's animation data
-				if parts[2] then
-					self._qcShellAttachment = tonumber(parts[2])
-				end
-
-				-- Create shell eject now (vm:GetAttachment is reliable during render)
-				-- SP: always eject when fire animation plays (no pending flag needed)
-				-- MP: only eject when the pending flag was set during prediction
-				if self.m9kr_PendingShellEject or game.SinglePlayer() then
-					self.m9kr_PendingShellEject = nil
-					self:EjectShell()
-				end
+			-- Parse QC parameters to cache the correct shell eject attachment
+			-- Format: "EjectBrass_556 3 90" → <effect_name> <attachment_id> <velocity>
+			local parts = {}
+			for part in string.gmatch(optStr, "%S+") do
+				table.insert(parts, part)
 			end
-			return true -- Block default Source Engine brass (EjectShell is called from firing code)
+
+			-- Cache the QC attachment ID so EjectShell() uses the correct position
+			-- This auto-detects the shell eject attachment from the viewmodel's animation data
+			if parts[2] then
+				self._qcShellAttachment = tonumber(parts[2])
+			end
+
+			-- Create shell eject now (vm:GetAttachment is reliable during render)
+			-- SP: always eject when fire animation plays (no pending flag needed)
+			-- MP: only eject when the pending flag was set during prediction
+			if self.m9kr_PendingShellEject or game.SinglePlayer() then
+				self.m9kr_PendingShellEject = nil
+				self.m9kr_PendingShellEjectTime = nil
+				self:EjectShell()
+			end
 		end
+		return true -- Block default Source Engine brass (EjectShell handles it)
 	end
 
 	-- Let other events pass through to default handler
@@ -2215,6 +2219,17 @@ function SWEP:Think()
 	end
 	self.LastTriggerState = triggerDown
 
+	-- CLIENT: Sync Primary.Automatic with SERVER fire mode
+	-- CycleFireMode runs SERVER-only, so CLIENT must read the networked fire mode
+	-- and update Primary.Automatic to prevent the engine from calling PrimaryAttack
+	-- continuously in semi/burst modes (which would cause full-auto behavior)
+	if CLIENT and self.FireModes then
+		local networkedMode = self.Weapon:GetNWInt("CurrentFireMode", 0)
+		if networkedMode > 0 and self.FireModes[networkedMode] then
+			self.Primary.Automatic = (self.FireModes[networkedMode] == "auto")
+		end
+	end
+
 	-- Burst fire: process queued shots via CurTime check (prediction-safe, unlike timers)
 	if self.BurstShotsRemaining and self.BurstShotsRemaining > 0 and self.NextBurstShotTime and CurTime() >= self.NextBurstShotTime then
 		self:FireBurstShot()
@@ -2237,6 +2252,17 @@ function SWEP:Think()
 
 			-- Update progress values (TFA-style approach - lightweight float lerp only, no heavy logic)
 			self:UpdateProgressRatios()
+		end
+
+		-- SP low ammo detection: in SP, PrimaryAttack runs on SERVER only,
+		-- so CLIENT detects ammo decrease to trigger low ammo sounds
+		if game.SinglePlayer() and self.CheckLowAmmo then
+			local currentClip = self:Clip1()
+			if self.m9kr_LastClipForLowAmmo and currentClip < self.m9kr_LastClipForLowAmmo then
+				self.LastShotTime = CurTime()
+				self:CheckLowAmmo()
+			end
+			self.m9kr_LastClipForLowAmmo = currentClip
 		end
 
 		-- Belt-fed weapon display update (bone/bodygroup belt depletion + reload animation)

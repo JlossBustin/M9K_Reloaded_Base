@@ -614,7 +614,7 @@ function SWEP:PrimaryAttack()
 				-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
 				if CLIENT or (game.SinglePlayer() and SERVER) then
 					self.LastShotTime = CurTime()
-					self:CheckLowAmmo()
+					if self.CheckLowAmmo then self:CheckLowAmmo() end
 				end
 
 				local bIron = self.Owner:KeyDown(IN_ATTACK2)
@@ -669,6 +669,16 @@ function SWEP:Think()
 		return
 	end
 
+	-- CLIENT: Sync Primary.Automatic with SERVER fire mode
+	-- CycleFireMode runs SERVER-only, so CLIENT must read the networked fire mode
+	-- and update Primary.Automatic to prevent full-auto behavior in semi/burst modes
+	if CLIENT and self.FireModes then
+		local networkedMode = self.Weapon:GetNWInt("CurrentFireMode", 0)
+		if networkedMode > 0 and self.FireModes[networkedMode] then
+			self.Primary.Automatic = (self.FireModes[networkedMode] == "auto")
+		end
+	end
+
 	-- STATE-BASED RELOAD SYSTEM: Process reload states every frame
 	self:ProcessReloadStatus()
 
@@ -714,7 +724,7 @@ function SWEP:Think()
 
 		-- In SP, SERVER runs Think (CLIENT prediction may not), so SERVER must also call
 		if CLIENT or (game.SinglePlayer() and SERVER) then
-			self:CheckLowAmmo()
+			if self.CheckLowAmmo then self:CheckLowAmmo() end
 		end
 
 		local bIron = self.Owner:KeyDown(IN_ATTACK2)
@@ -762,6 +772,17 @@ function SWEP:Think()
 			-- Update progress values (TFA-style approach)
 			self:UpdateProgressRatios()
 		end
+		-- SP low ammo detection: in SP, PrimaryAttack runs on SERVER only,
+		-- so CLIENT detects ammo decrease to trigger low ammo sounds
+		if game.SinglePlayer() and self.CheckLowAmmo then
+			local currentClip = self:Clip1()
+			if self.m9kr_LastClipForLowAmmo and currentClip < self.m9kr_LastClipForLowAmmo then
+				self.LastShotTime = CurTime()
+				self:CheckLowAmmo()
+			end
+			self.m9kr_LastClipForLowAmmo = currentClip
+		end
+
 		-- Update belt-fed ammo display (if applicable)
 		self:UpdateBeltAmmo()
 	end

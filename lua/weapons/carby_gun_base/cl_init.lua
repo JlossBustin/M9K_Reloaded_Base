@@ -6,7 +6,6 @@ include("shared.lua")
 -- Client-side Animation Variable Defaults
 -- ============================================================================
 
-SWEP.AnimationTime = 0 -- Time tracker for animations
 SWEP.BreathIntensity = 0 -- Smooth breath intensity
 SWEP.WalkIntensity = 0 -- Smooth walk intensity
 SWEP.SprintIntensity = 0 -- Smooth sprint intensity
@@ -251,11 +250,7 @@ function SWEP:CalcView(ply, origin, angles, fov)
 
 	local currentFOV = self.m9kr_FOVCurrent or 0
 	if currentFOV > 0 then
-		return {
-			origin = origin,
-			angles = angles,
-			fov = currentFOV
-		}
+		return origin, angles, currentFOV
 	end
 end
 
@@ -644,46 +639,54 @@ end)
 
 -- PostDrawViewModel: fallback for deferred effects on models without QC animation events
 -- Muzzle flash and shell eject effects are queued during prediction and normally consumed
--- by FireAnimationEvent during render. If the viewmodel has no QC muzzle flash or
--- EjectBrass events, the pending effects would never be created. This hook fires after
--- the viewmodel is fully drawn, so vm:GetAttachment() is reliable.
+-- by FireAnimationEvent during render at QC-accurate timing. This hook ONLY acts as
+-- fallback for models that lack QC events entirely (no muzzle flash or EjectBrass events).
+-- Uses two-stage detection: first checks if the model has ever produced QC events (fast path),
+-- then falls back to a time-delayed check for models without QC events.
 hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
 	if not IsValid(weapon) then return end
 
-	-- Process remaining pending muzzle flash (model had no QC muzzle flash events)
-	if weapon.m9kr_PendingMuzzleFlash then
-		local pending = weapon.m9kr_PendingMuzzleFlash
-		weapon.m9kr_PendingMuzzleFlash = nil
+	-- Muzzle flash fallback: only for models without QC muzzle flash events
+	if weapon.m9kr_PendingMuzzleFlash and not weapon.m9kr_HasQCMuzzleEvent then
+		local elapsed = CurTime() - (weapon.m9kr_PendingMuzzleFlash.time or 0)
+		if elapsed > 0.3 then
+			local pending = weapon.m9kr_PendingMuzzleFlash
+			weapon.m9kr_PendingMuzzleFlash = nil
 
-		if IsValid(ply) then
-			local fx = EffectData()
-			fx:SetEntity(weapon)
-			fx:SetOrigin(ply:GetShootPos())
+			if IsValid(ply) then
+				local fx = EffectData()
+				fx:SetEntity(weapon)
+				fx:SetOrigin(ply:GetShootPos())
 
-			local muzzleDir = ply:GetAimVector()
-			local attId = weapon:LookupAttachment(weapon.MuzzleAttachment or "1")
-			if attId and attId > 0 then
-				local att = vm:GetAttachment(attId)
-				if att and att.Ang then
-					muzzleDir = att.Ang:Forward()
+				local muzzleDir = ply:GetAimVector()
+				local attId = weapon:LookupAttachment(weapon.MuzzleAttachment or "1")
+				if attId and attId > 0 then
+					local att = vm:GetAttachment(attId)
+					if att and att.Ang then
+						muzzleDir = att.Ang:Forward()
+					end
 				end
-			end
 
-			fx:SetNormal(muzzleDir)
-			fx:SetAttachment(weapon.MuzzleAttachment)
+				fx:SetNormal(muzzleDir)
+				fx:SetAttachment(weapon.MuzzleAttachment)
 
-			util.Effect(pending.name, fx)
-			if pending.smoke then
-				util.Effect("m9kr_muzzlesmoke", fx)
+				util.Effect(pending.name, fx)
+				if pending.smoke then
+					util.Effect("m9kr_muzzlesmoke", fx)
+				end
 			end
 		end
 	end
 
-	-- Process remaining pending shell eject (model had no QC EjectBrass events)
-	if weapon.m9kr_PendingShellEject then
-		weapon.m9kr_PendingShellEject = nil
-		if weapon.EjectShell then
-			weapon:EjectShell()
+	-- Shell eject fallback: only for models without QC EjectBrass events
+	if weapon.m9kr_PendingShellEject and not weapon.m9kr_HasQCShellEvent then
+		local elapsed = CurTime() - (weapon.m9kr_PendingShellEjectTime or 0)
+		if elapsed > 0.3 then
+			weapon.m9kr_PendingShellEject = nil
+			weapon.m9kr_PendingShellEjectTime = nil
+			if weapon.EjectShell then
+				weapon:EjectShell()
+			end
 		end
 	end
 end)
@@ -1081,7 +1084,6 @@ function SWEP:GetViewModelPosition(pos, ang)
 	-- Enhanced animations
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
 		-- Ensure variables are initialized
-		self.AnimationTime = self.AnimationTime or 0
 		self.BreathIntensity = self.BreathIntensity or 0
 		self.WalkIntensity = self.WalkIntensity or 0
 		self.SprintIntensity = self.SprintIntensity or 0
@@ -1100,6 +1102,8 @@ function SWEP:GetViewModelPosition(pos, ang)
 			local recentSafetyToggle = self.SafetyToggleTime and (CurTime() - self.SafetyToggleTime) < 0.5
 			if not recentSafetyToggle and not self:GetIsOnSafe() then
 				self.FireModeSwitchTime = CurTime()
+				-- Play fire mode switch sound on CLIENT (SERVER EmitSound may not reach owning player reliably in MP)
+				self.Weapon:EmitSound("Weapon_AR2.Empty")
 			end
 			self.LastNetworkedFireMode = currentNetworkedMode
 		end
@@ -1112,16 +1116,10 @@ function SWEP:GetViewModelPosition(pos, ang)
 		local ft = isPaused and 0.001 or math.Clamp(rawFrameTime, 0.001, 0.1) -- Prevent division by zero when menu opens
 		local ct = CurTime()
 
-		-- Update animation time ONLY if not paused (this freezes breathing animation)
-		-- Guard with FrameNumber to prevent double-advancement in MP
-		-- (GetViewModelPosition can be called during both prediction and render)
-		if not isPaused then
-			local curFrame = FrameNumber()
-			if self.m9kr_LastAnimFrame ~= curFrame then
-				self.m9kr_LastAnimFrame = curFrame
-				self.AnimationTime = self.AnimationTime + ft
-			end
-		end
+		-- Use CurTime() directly as the animation clock
+		-- CurTime pauses automatically in SP (FrameTime = 0), and is not affected by
+		-- prediction re-runs in MP, so no accumulation or FrameNumber guards are needed
+		local animTime = CurTime()
 
 		-- Track camera rotation velocity for view turning tilt
 		local currentEyeAngles = self.Owner:EyeAngles()
@@ -1198,7 +1196,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 
 		if self.BreathIntensity > 0.01 then
 			local breatheMult = self.BreathIntensity * aimMult
-			local breatheTime = self.AnimationTime * 1.5
+			local breatheTime = animTime * 1.5
 
 			-- Subtle breathing motion
 			pos:Add(right * math.sin(breatheTime) * breatheMult * flip * 0.1)
@@ -1210,7 +1208,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 
 		if self.WalkIntensity > 0.01 then
 			local walkMult = self.WalkIntensity * aimMult
-			local walkTime = self.AnimationTime * 8
+			local walkTime = animTime * 8
 
 			-- Natural walking bob (reduced vertical bob by 3/4)
 			pos:Add(up * math.abs(math.sin(walkTime * 2)) * walkMult * 0.05)
@@ -1223,7 +1221,7 @@ function SWEP:GetViewModelPosition(pos, ang)
 
 		if self.SprintIntensity > 0.01 then
 			local sprintMult = self.SprintIntensity
-			local sprintTime = self.AnimationTime * 9
+			local sprintTime = animTime * 9
 
 			-- Sprint bob (reduced vertical by 3/4, faster than walk)
 			pos:Add(up * math.abs(math.sin(sprintTime * 2)) * sprintMult * 0.1)
