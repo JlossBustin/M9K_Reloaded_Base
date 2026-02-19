@@ -52,7 +52,7 @@ function M9KR.LowAmmo.GetWeaponState(weapon)
 			lastWarnTime = 0,
 			lastClip = weapon:Clip1(),
 			shotsSinceLastWarning = 0,  -- Counter for SoundIndicatorInterval throttling
-			justFired = false,          -- Set by EntityFireBullets hook, cleared after check
+			justFired = false,          -- Set by EntityFireBullets hook; signals Clip1() - 1 prediction
 		}
 	end
 
@@ -88,7 +88,12 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 	local state = M9KR.LowAmmo.GetWeaponState(weapon)
 	if not state then return end
 
+	-- EntityFireBullets fires BEFORE TakePrimaryAmmo decrements Clip1()
+	-- When justFired is set, subtract 1 to get the actual post-fire clip value
 	local clip = weapon:Clip1()
+	if state.justFired then
+		clip = clip - 1
+	end
 	local maxClip = weapon.Primary.ClipSize
 
 	-- Don't warn for weapons with no magazine (like shotguns that feed directly)
@@ -193,18 +198,16 @@ hook.Add("EntityFireBullets", "M9KR_LowAmmo_CheckOnFire", function(entity, data)
 	local weapon = owner:GetActiveWeapon()
 	if not IsValid(weapon) then return end
 
-	-- Mark that this weapon just fired (checked in deferred CheckWeapon)
+	-- Mark that this weapon just fired (CheckWeapon uses this to subtract 1 from Clip1)
 	local state = M9KR.LowAmmo.GetWeaponState(weapon)
 	if state then
 		state.justFired = true
 	end
 
-	-- Defer check to next frame so TakePrimaryAmmo has decremented Clip1()
-	timer.Simple(0, function()
-		if IsValid(weapon) then
-			M9KR.LowAmmo.CheckWeapon(weapon)
-		end
-	end)
+	-- Check immediately — no timer deferral so the sound plays in sync with the gunshot
+	-- CheckWeapon subtracts 1 from Clip1() when justFired is set since
+	-- EntityFireBullets fires before TakePrimaryAmmo decrements the clip
+	M9KR.LowAmmo.CheckWeapon(weapon)
 end)
 
 -- Precache all low ammo sounds
