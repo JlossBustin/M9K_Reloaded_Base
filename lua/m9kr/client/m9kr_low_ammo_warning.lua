@@ -50,8 +50,9 @@ function M9KR.LowAmmo.GetWeaponState(weapon)
 		M9KR.LowAmmo.WeaponStates[weapon] = {
 			wasLowAmmo = false,
 			lastWarnTime = 0,
-			lastClip = 0,
+			lastClip = weapon:Clip1(),
 			shotsSinceLastWarning = 0,  -- Counter for SoundIndicatorInterval throttling
+			justFired = false,          -- Set by EntityFireBullets hook, cleared after check
 		}
 	end
 
@@ -97,10 +98,11 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 	local threshold = GetConVar("m9kr_low_ammo_threshold"):GetInt() / 100
 	local isLowAmmo = clip <= (maxClip * threshold) and clip > 0
 
-	-- Play low ammo sound when in low ammo state
+	-- Play low ammo sound when in low ammo state and a shot was just fired
+	-- justFired flag is set by EntityFireBullets hook (more reliable than clip comparison)
 	-- For high-RPM weapons with SoundIndicatorInterval, throttle the warning sound
 	-- Otherwise play on EVERY shot (TFA-style behavior)
-	if isLowAmmo and clip < state.lastClip then
+	if isLowAmmo and state.justFired then
 		local shouldPlayWarning = true
 
 		-- Check if weapon uses SoundIndicatorInterval (high-RPM weapons like minigun)
@@ -134,7 +136,7 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 
 	-- Detect last round fired (clip just hit 0)
 	-- Note: This always plays regardless of SoundIndicatorInterval since it's a one-time event
-	if clip == 0 and state.lastClip == 1 then
+	if clip == 0 and state.justFired then
 		-- Play caliber-specific last round sound
 		local ammoType = weapon:GetPrimaryAmmoType()
 		local ammoTypeName = game.GetAmmoName(ammoType) or "ar2"
@@ -161,6 +163,7 @@ function M9KR.LowAmmo.CheckWeapon(weapon)
 	end
 
 	-- Update state
+	state.justFired = false
 	state.wasLowAmmo = isLowAmmo
 	state.lastClip = clip
 end
@@ -189,6 +192,12 @@ hook.Add("EntityFireBullets", "M9KR_LowAmmo_CheckOnFire", function(entity, data)
 
 	local weapon = owner:GetActiveWeapon()
 	if not IsValid(weapon) then return end
+
+	-- Mark that this weapon just fired (checked in deferred CheckWeapon)
+	local state = M9KR.LowAmmo.GetWeaponState(weapon)
+	if state then
+		state.justFired = true
+	end
 
 	-- Defer check to next frame so TakePrimaryAmmo has decremented Clip1()
 	timer.Simple(0, function()

@@ -2084,17 +2084,17 @@ function SWEP:SafetyOff()
 end
 
 function SWEP:SelectFireMode()
-    if self.NextFireSelect and CurTime() < self.NextFireSelect then return end
-    self.NextFireSelect = CurTime() + 0.5
+	if self.NextFireSelect and CurTime() < self.NextFireSelect then return end
+	self.NextFireSelect = CurTime() + 0.5
 
-	-- Cycle through the fire modes (returns false for single-mode weapons)
-	local cycled = self:CycleFireMode()
-	if not cycled then return end
+	-- Single-mode weapons: no cycling, no sound
+	if self:GetFireModeCount() <= 1 then return end
 
-	-- Play selection sound only when fire mode actually changed
-	if IsValid(self.Weapon) then
-		self.Weapon:EmitSound("Weapon_AR2.Empty")
-    end
+	-- Cycle to the next fire mode
+	self:CycleFireMode()
+
+	-- Play selection sound
+	self:EmitSound("Weapon_AR2.Empty")
 end
  
 -- IronSight
