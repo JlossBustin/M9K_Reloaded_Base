@@ -70,7 +70,9 @@ SWEP.ActionSounds = {}
 --   burst: 0.003 (tighter hip fire)
 --   semi: 0.0001 (very tight hip fire)
 --   bolt: 0.001 (bolt-action precision)
-SWEP.FireModes = {"auto", "semi"} -- Defaults : weapons override this
+-- SWEP.FireModes is NOT defined here — each weapon MUST define its own FireModes table.
+-- If a weapon doesn't define FireModes, it defaults to automatic fire with no mode switching.
+-- Example: SWEP.FireModes = {"auto", "semi"} or SWEP.FireModes = {"bolt"}
 SWEP.CurrentFireMode = 1 -- Index into FireModes table
 SWEP.FireModeNames = {
 	-- standard fire modes
@@ -2061,9 +2063,6 @@ function SWEP:SelectFireMode()
 
 	-- Cycle to the next fire mode
 	self:CycleFireMode()
-
-	-- Play selection sound
-	self:EmitSound("Weapon_AR2.Empty")
 end
  
 -- ADS sounds, FOV transitions, UpdateWeaponInputState, M9KR_StartFOVTransition, M9KR_GetADSTargetFOV are in cl_init.lua

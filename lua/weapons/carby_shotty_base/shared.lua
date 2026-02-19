@@ -288,10 +288,8 @@ function SWEP:CycleFireMode()
 	-- Trigger fire mode switch animation (viewmodel manipulation)
 	self.FireModeSwitchTime = CurTime()
 
-	-- Play fire mode switch sound
-	if IsValid(self.Weapon) then
-		self.Weapon:EmitSound("Weapon_AR2.Empty")
-	end
+	-- Sound is played CLIENT-side when the NW fire mode change is detected
+	-- (in GetViewModelPosition, inherited from gun_base). Playing here would double-play in SP.
 end
 
 function SWEP:IsFireModeBurst()
