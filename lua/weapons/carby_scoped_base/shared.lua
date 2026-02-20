@@ -109,9 +109,10 @@ function SWEP:GetOptimalReticleScale()
 end
 
 function SWEP:Initialize()
-	if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 	self.OriginalHoldType = self.HoldType or "ar2"
 	self:M9KR_SetHoldType(self.HoldType)
+
+	if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 	
 	-- Set dynamic ReticleScale based on optic type
 	self.ReticleScale = self:GetOptimalReticleScale()

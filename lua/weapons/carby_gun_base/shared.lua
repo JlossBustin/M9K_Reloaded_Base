@@ -1842,14 +1842,6 @@ function SWEP:Think()
 		end
 	end
 
-	-- Enforce networked hold type on all clients
-	if CLIENT and self.GetM9KRHoldType then
-		local networkedHoldType = self:GetM9KRHoldType()
-		if networkedHoldType and networkedHoldType ~= "" and networkedHoldType ~= self.HoldType then
-			self:SetHoldType(networkedHoldType)
-		end
-	end
-
 	-- Process burst fire
 	if self.BurstShotsRemaining and self.BurstShotsRemaining > 0 and self.NextBurstShotTime and CurTime() >= self.NextBurstShotTime then
 		self:FireBurstShot()
