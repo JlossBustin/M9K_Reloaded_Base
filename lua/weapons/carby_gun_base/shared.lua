@@ -170,6 +170,41 @@ function SWEP:SetupDataTables()
 	self:NetworkVar("Bool", 3, "IsOnSafe")
 	self:NetworkVar("Int", 0, "M9KRShotsFired")
 	self:NetworkVar("String", 0, "M9KRHoldType")
+
+	-- Third-person muzzle flash: fires on ALL clients when shot counter changes
+	if CLIENT then
+		self:NetworkVarNotify("M9KRShotsFired", self.OnM9KRShotsFiredChanged)
+	end
+end
+
+-- NetworkVarNotify callback: fires on ALL clients when M9KRShotsFired changes.
+-- Spawns third-person muzzle flash for non-owning players in multiplayer.
+function SWEP:OnM9KRShotsFiredChanged(name, old, new)
+	if game.SinglePlayer() then return end
+
+	local owner = self:GetOwner()
+	if not IsValid(owner) or not owner:IsPlayer() then return end
+	if owner == LocalPlayer() then return end
+
+	local mfCvar = GetConVar("M9KR_MuzzleFlash")
+	if not mfCvar or not mfCvar:GetBool() then return end
+
+	local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
+	if self.Silenced and self.MuzzleFlashEffectSilenced then
+		effectName = self.MuzzleFlashEffectSilenced
+	end
+
+	local fx = EffectData()
+	fx:SetEntity(self)
+	fx:SetOrigin(owner:GetShootPos())
+	fx:SetNormal(owner:GetAimVector())
+	fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
+	util.Effect(effectName, fx)
+
+	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
+	if smokeCvar and smokeCvar:GetInt() == 1 then
+		util.Effect("m9kr_muzzlesmoke", fx)
+	end
 end
 
 function SWEP:UpdateWorldModel()
@@ -800,7 +835,7 @@ function SWEP:PrimaryAttack()
 end
 
 -- Deferred effects: SP creates immediately; MP queues for render time (FireAnimationEvent/PostDrawViewModel).
--- MP third-person uses NetworkVar shot counter; holdtype is synced via M9KRHoldType NetworkVar.
+-- MP third-person uses NetworkVarNotify on shot counter (fires on all clients); holdtype is synced via M9KRHoldType NetworkVar.
 
 -- SetHoldType wrapper that also networks hold type to all clients
 function SWEP:M9KR_SetHoldType(holdType)
@@ -1812,37 +1847,6 @@ function SWEP:Think()
 		local networkedHoldType = self:GetM9KRHoldType()
 		if networkedHoldType and networkedHoldType ~= "" and networkedHoldType ~= self.HoldType then
 			self:SetHoldType(networkedHoldType)
-		end
-	end
-
-	-- Third-person muzzle flash for non-owning players
-	if CLIENT and not game.SinglePlayer() then
-		local owner = self:GetOwner()
-		if IsValid(owner) and owner:IsPlayer() and owner ~= LocalPlayer() then
-			local shotsFired = self:GetM9KRShotsFired() or 0
-			if shotsFired ~= (self.m9kr_LastShotsFired or 0) then
-				self.m9kr_LastShotsFired = shotsFired
-
-				local mfCvar = GetConVar("M9KR_MuzzleFlash")
-				if mfCvar and mfCvar:GetBool() then
-					local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
-					if self.Silenced and self.MuzzleFlashEffectSilenced then
-						effectName = self.MuzzleFlashEffectSilenced
-					end
-
-					local fx = EffectData()
-					fx:SetEntity(self)
-					fx:SetOrigin(owner:GetShootPos())
-					fx:SetNormal(owner:GetAimVector())
-					fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
-					util.Effect(effectName, fx)
-
-					local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
-					if smokeCvar and smokeCvar:GetInt() == 1 then
-						util.Effect("m9kr_muzzlesmoke", fx)
-					end
-				end
-			end
 		end
 	end
 
