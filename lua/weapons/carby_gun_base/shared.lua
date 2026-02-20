@@ -1372,17 +1372,13 @@ function SWEP:Reload()
 
 			self.Weapon:SetNWBool("Reloading", false)
 
-			-- Send weapon back to idle animation after reload completes
-			if self.Silenced then
-				self.Weapon:SendWeaponAnim(ACT_VM_IDLE_SILENCED)
-			else
-				self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
-			end
+			-- IronSight's ResetSights handler already sent IDLE at T+animDur
+			-- No SendWeaponAnim here — avoids overriding any subsequent reload animation
 		end)
-		
+
 		return
 	end
-	
+
 	-- Manual reload handling (instead of DefaultReload to control timing)
 	self:SendWeaponAnim(reloadAct)
 
@@ -1452,12 +1448,8 @@ function SWEP:Reload()
 			
 			self.Weapon:SetNWBool("Reloading", false)
 
-			-- Send weapon back to idle animation after reload completes
-			if self.Silenced then
-				self.Weapon:SendWeaponAnim(ACT_VM_IDLE_SILENCED)
-			else
-				self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
-			end
+			-- IronSight's ResetSights handler already sent IDLE at T+animDur
+			-- No SendWeaponAnim here — avoids overriding follow-up +1 reload animation
 
 			-- Check if player wants to sprint/ADS after reload
 			if self.Owner:KeyDown(IN_SPEED) and self.Weapon:GetClass() == self.Gun then
