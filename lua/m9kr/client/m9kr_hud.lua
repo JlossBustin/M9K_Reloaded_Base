@@ -616,56 +616,7 @@ hook.Add("Think", "M9KR_HUD_ActivityTracker", function()
 	end
 end)
 
---[[
-	HUDShouldDraw - INSTANTLY hide default HUD for M9K weapons
-	NO caching, NO delays - check weapon base EVERY time this is called
-]]--
-local HUD_MANAGED = {
-	["CHudAmmo"] = true,
-	["CHudSecondaryAmmo"] = true,
-	["CHudHealth"] = true,
-	["CHudBattery"] = true,
-	["CHudSquadStatus"] = true,
-	["CHudCrosshair"] = true,
-}
-
-
-hook.Add("HUDShouldDraw", "M9KR_HUD_HideDefault", function(name)
-	-- Fast path: only process relevant HUD elements
-	if not HUD_MANAGED[name] then return end
-
-	local ply = LocalPlayer()
-	if not IsValid(ply) then return end
-
-	local weapon = ply:GetActiveWeapon()
-	if not IsValid(weapon) then return end
-
-	-- Crosshair hiding (applies regardless of HUD mode)
-	if name == "CHudCrosshair" and weapon.DrawCrosshair == false then
-		return false
-	end
-
-	-- Check if this is an M9K weapon RIGHT NOW (no caching)
-	local isM9K = weapon.Base and M9KR.WeaponBases[weapon.Base]
-	if not isM9K then return end
-
-	local hudMode = GetConVar("m9kr_hud_mode"):GetInt()
-	if hudMode == 0 then return end
-
-	-- Mode >= 1: Always hide default ammo (custom weapon HUD replaces it)
-	if name == "CHudAmmo" or name == "CHudSecondaryAmmo" then
-		return false
-	end
-
-	-- Mode 3 or 4: Hide default health/armor (custom health/armor HUD replaces it)
-	if (hudMode == 3 or hudMode == 4) and (name == "CHudHealth" or name == "CHudBattery") then
-		return false
-	end
-
-	-- Mode 2 or 4: Hide default squad (custom squad HUD replaces it)
-	if (hudMode == 2 or hudMode == 4) and name == "CHudSquadStatus" then
-		return false
-	end
-end)
+-- HUDShouldDraw logic moved to SWEP:HUDShouldDraw in carby_gun_base/cl_init.lua
+-- This avoids running the hook every frame for every HUD element when non-M9K weapons are active
 
 print("[M9K:R] HUD system loaded")

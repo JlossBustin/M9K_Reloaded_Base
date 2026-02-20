@@ -2,6 +2,9 @@
 
 include("shared.lua")
 
+-- Cached ConVar for HUD mode (avoid GetConVar lookup every frame)
+local m9kr_hud_mode = GetConVar("m9kr_hud_mode")
+
 -- Client-side Animation Variable Defaults
 
 SWEP.BreathIntensity = 0
@@ -1327,13 +1330,38 @@ function SWEP:DrawWorldModel()
 end
 
 local M9KR_HudHide = {
-	CHudAmmo = true,
-	CHudSecondaryAmmo = true,
-	CHudHealth = true
+	["CHudAmmo"] = true,
+	["CHudSecondaryAmmo"] = true,
+	["CHudHealth"] = true,
+	["CHudBattery"] = true,
+	["CHudSquadStatus"] = true,
+	["CHudCrosshair"] = true,
 }
 
 function SWEP:HUDShouldDraw(name)
-	if M9KR_HudHide[name] and GetConVar("m9kr_hud_mode"):GetInt() == 1 then
+	-- Fast path: only process HUD elements we manage
+	if not M9KR_HudHide[name] then return end
+
+	-- Crosshair hiding (applies regardless of HUD mode)
+	if name == "CHudCrosshair" and self.DrawCrosshair == false then
+		return false
+	end
+
+	local hudMode = m9kr_hud_mode:GetInt()
+	if hudMode == 0 then return end
+
+	-- Mode >= 1: Hide default ammo (custom weapon HUD replaces it)
+	if name == "CHudAmmo" or name == "CHudSecondaryAmmo" then
+		return false
+	end
+
+	-- Mode 3 or 4: Hide default health/armor
+	if (hudMode == 3 or hudMode == 4) and (name == "CHudHealth" or name == "CHudBattery") then
+		return false
+	end
+
+	-- Mode 2 or 4: Hide default squad
+	if (hudMode == 2 or hudMode == 4) and name == "CHudSquadStatus" then
 		return false
 	end
 end
