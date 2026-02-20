@@ -88,45 +88,46 @@ end
 	Plays whizzing sound when bullet passes close to a player.
 ]]--
 local function CreateNearMissEffects(weapon, startPos, hitPos, attacker)
-	if not SERVER then return end
-	if not IsValid(weapon) then return end
-	if not startPos or not hitPos then return end
+	if SERVER then
+		if not IsValid(weapon) then return end
+		if not startPos or not hitPos then return end
 
-	-- Calculate bullet path direction and length
-	local bulletDir = hitPos - startPos
-	local bulletLength = bulletDir:Length()
-	if bulletLength < 1 then return end
-	bulletDir:Normalize()
+		-- Calculate bullet path direction and length
+		local bulletDir = hitPos - startPos
+		local bulletLength = bulletDir:Length()
+		if bulletLength < 1 then return end
+		bulletDir:Normalize()
 
-	-- Find nearby players for near-miss whizzing sounds
-	for _, ply in ipairs(player.GetAll()) do
-		if IsValid(ply) and ply ~= attacker then
-			-- Get player's center mass position (not feet)
-			local plyPos = ply:GetPos() + Vector(0, 0, 40)
+		-- Find nearby players for near-miss whizzing sounds
+		for _, ply in ipairs(player.GetAll()) do
+			if IsValid(ply) and ply ~= attacker then
+				-- Get player's center mass position (not feet)
+				local plyPos = ply:GetPos() + Vector(0, 0, 40)
 
-			-- Calculate closest point on bullet path to player
-			-- Using vector projection: closest point = start + dot(plyPos-start, dir) * dir
-			local toPlayer = plyPos - startPos
-			local projection = toPlayer:Dot(bulletDir)
+				-- Calculate closest point on bullet path to player
+				-- Using vector projection: closest point = start + dot(plyPos-start, dir) * dir
+				local toPlayer = plyPos - startPos
+				local projection = toPlayer:Dot(bulletDir)
 
-			-- Clamp projection to the actual bullet path (between start and hit)
-			projection = math.Clamp(projection, 0, bulletLength)
+				-- Clamp projection to the actual bullet path (between start and hit)
+				projection = math.Clamp(projection, 0, bulletLength)
 
-			-- Find the closest point on the bullet's path
-			local closestPoint = startPos + bulletDir * projection
+				-- Find the closest point on the bullet's path
+				local closestPoint = startPos + bulletDir * projection
 
-			-- Calculate distance from player to closest point on bullet path
-			local missDistance = plyPos:Distance(closestPoint)
+				-- Calculate distance from player to closest point on bullet path
+				local missDistance = plyPos:Distance(closestPoint)
 
-			-- Only play whizzing sound if bullet passed within 128 units of player
-			-- and the closest point is not at the very start (shooter's position)
-			if missDistance <= 128 and projection > 64 then
-				-- Play whizzing sound at a point near the player
-				if #bulletMissSounds > 0 then
-					local snd = table.Random(bulletMissSounds)
-					if snd then
-						-- Play sound at the closest point on bullet path
-						sound.Play(snd, closestPoint, 75, math.random(90, 130), 1)
+				-- Only play whizzing sound if bullet passed within 128 units of player
+				-- and the closest point is not at the very start (shooter's position)
+				if missDistance <= 128 and projection > 64 then
+					-- Play whizzing sound at a point near the player
+					if #bulletMissSounds > 0 then
+						local snd = table.Random(bulletMissSounds)
+						if snd then
+							-- Play sound at the closest point on bullet path
+							sound.Play(snd, closestPoint, 75, math.random(90, 130), 1)
+						end
 					end
 				end
 			end
@@ -200,38 +201,39 @@ function M9KR.Penetration.VanillaPenetration(weapon, bouncenum, attacker, tr, pa
 			if not IsValid(attacker) or not attacker.FireBullets then return false end
 
 			-- Use timer to prevent crashing (must execute outside bullet callback context)
-			timer.Simple(0, function()
-				if CLIENT then return end -- FireBullets only on server
-				if not IsValid(attacker) then return end
-				attacker:FireBullets({
-					Attacker = attacker,
-					Damage = paininfo.Damage * 0.5,
-					Force = paininfo.Force,
-					Num = 1,
-					Src = tr.HitPos + (tr.HitNormal * 5),
-					Dir = RicochetDir,
-					HullSize = 0,
-					Spread = Vector(0, 0, 0),
-					Tracer = 0,  -- No tracers for ricochet bullets
-					TracerName = "",
-					Callback = function(cb_attacker, tracedata, dmginfo)
-						-- Match legacy M9K: check prediction in nested callbacks
-						if not IsFirstTimePredicted() then return end
-						-- Defensive checks inside callback (can be invoked async-ish)
-						if not IsValid(weapon) then return end
-						if not IsValid(cb_attacker) then return end
-						if not tracedata or not dmginfo then return end
-						-- Construct paininfo table from dmginfo object
-						local paininfo_cb = {
-							Damage = dmginfo:GetDamage(),
-							Force = dmginfo:GetDamageForce()
-						}
-						if weapon and weapon.BulletPenetrate then
-							weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+			if SERVER then
+				timer.Simple(0, function()
+					if not IsValid(attacker) then return end
+					attacker:FireBullets({
+						Attacker = attacker,
+						Damage = paininfo.Damage * 0.5,
+						Force = paininfo.Force,
+						Num = 1,
+						Src = tr.HitPos + (tr.HitNormal * 5),
+						Dir = RicochetDir,
+						HullSize = 0,
+						Spread = Vector(0, 0, 0),
+						Tracer = 0,  -- No tracers for ricochet bullets
+						TracerName = "",
+						Callback = function(cb_attacker, tracedata, dmginfo)
+							-- Match legacy M9K: check prediction in nested callbacks
+							if not IsFirstTimePredicted() then return end
+							-- Defensive checks inside callback (can be invoked async-ish)
+							if not IsValid(weapon) then return end
+							if not IsValid(cb_attacker) then return end
+							if not tracedata or not dmginfo then return end
+							-- Construct paininfo table from dmginfo object
+							local paininfo_cb = {
+								Damage = dmginfo:GetDamage(),
+								Force = dmginfo:GetDamageForce()
+							}
+							if weapon and weapon.BulletPenetrate then
+								weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+							end
 						end
-					end
-				})
-			end)
+					})
+				end)
+			end
 
 			return true
 		end
@@ -307,36 +309,37 @@ function M9KR.Penetration.VanillaPenetration(weapon, bouncenum, attacker, tr, pa
 	if not IsValid(attacker) or not attacker.FireBullets then return false end
 
 	-- Use timer to prevent crashing (must execute outside bullet callback context)
-	timer.Simple(0, function()
-		if CLIENT then return end  -- FireBullets only on server
-		if not IsValid(attacker) then return end
-		attacker:FireBullets({
-			Attacker = attacker,
-			Damage = paininfo.Damage * 0.7,
-			Force = paininfo.Force,
-			Num = 1,
-			Src = exitPos,
-			Dir = tr.Normal,  -- tr.Normal is the bullet direction in callback context
-			HullSize = 0,
-			Spread = Vector(0, 0, 0),
-			Tracer = 0,  -- No tracers for penetration bullets
-			TracerName = "",
-			Callback = function(cb_attacker, tracedata, dmginfo)
-				-- Match legacy M9K: check prediction in nested callbacks
-				if not IsFirstTimePredicted() then return end
-				if not IsValid(weapon) then return end
-				if not IsValid(cb_attacker) then return end
-				if not tracedata or not dmginfo then return end
-				local paininfo_cb = {
-					Damage = dmginfo:GetDamage(),
-					Force = dmginfo:GetDamageForce()
-				}
-				if weapon and weapon.BulletPenetrate then
-					weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+	if SERVER then
+		timer.Simple(0, function()
+			if not IsValid(attacker) then return end
+			attacker:FireBullets({
+				Attacker = attacker,
+				Damage = paininfo.Damage * 0.7,
+				Force = paininfo.Force,
+				Num = 1,
+				Src = exitPos,
+				Dir = tr.Normal,  -- tr.Normal is the bullet direction in callback context
+				HullSize = 0,
+				Spread = Vector(0, 0, 0),
+				Tracer = 0,  -- No tracers for penetration bullets
+				TracerName = "",
+				Callback = function(cb_attacker, tracedata, dmginfo)
+					-- Match legacy M9K: check prediction in nested callbacks
+					if not IsFirstTimePredicted() then return end
+					if not IsValid(weapon) then return end
+					if not IsValid(cb_attacker) then return end
+					if not tracedata or not dmginfo then return end
+					local paininfo_cb = {
+						Damage = dmginfo:GetDamage(),
+						Force = dmginfo:GetDamageForce()
+					}
+					if weapon and weapon.BulletPenetrate then
+						weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+					end
 				end
-			end
-		})
-	end)
+			})
+		end)
+	end
 
 	return true
 end
@@ -454,36 +457,37 @@ function M9KR.Penetration.DynamicPenetration(weapon, bouncenum, attacker, tr, pa
 			if not IsValid(attacker) or not attacker.FireBullets then return false end
 
 			-- Use timer to prevent crashing (must execute outside bullet callback context)
-			timer.Simple(0, function()
-				if CLIENT then return end -- FireBullets only on server
-				if not IsValid(attacker) then return end
-				attacker:FireBullets({
-					Attacker = attacker,
-					Damage = paininfo.Damage * 0.5,
-					Force = paininfo.Force,
-					Num = 1,
-					Src = tr.HitPos + (tr.HitNormal * 5),
-					Dir = RicochetDir,
-					HullSize = 0,
-					Spread = Vector(0, 0, 0),
-					Tracer = 0,  -- No tracers for ricochet bullets
-					TracerName = "",
-					Callback = function(cb_attacker, tracedata, dmginfo)
-						-- Match legacy M9K: check prediction in nested callbacks
-						if not IsFirstTimePredicted() then return end
-						if not IsValid(weapon) then return end
-						if not IsValid(cb_attacker) then return end
-						if not tracedata or not dmginfo then return end
-						local paininfo_cb = {
-							Damage = dmginfo:GetDamage(),
-							Force = dmginfo:GetDamageForce()
-						}
-						if weapon and weapon.BulletPenetrate then
-							weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+			if SERVER then
+				timer.Simple(0, function()
+					if not IsValid(attacker) then return end
+					attacker:FireBullets({
+						Attacker = attacker,
+						Damage = paininfo.Damage * 0.5,
+						Force = paininfo.Force,
+						Num = 1,
+						Src = tr.HitPos + (tr.HitNormal * 5),
+						Dir = RicochetDir,
+						HullSize = 0,
+						Spread = Vector(0, 0, 0),
+						Tracer = 0,  -- No tracers for ricochet bullets
+						TracerName = "",
+						Callback = function(cb_attacker, tracedata, dmginfo)
+							-- Match legacy M9K: check prediction in nested callbacks
+							if not IsFirstTimePredicted() then return end
+							if not IsValid(weapon) then return end
+							if not IsValid(cb_attacker) then return end
+							if not tracedata or not dmginfo then return end
+							local paininfo_cb = {
+								Damage = dmginfo:GetDamage(),
+								Force = dmginfo:GetDamageForce()
+							}
+							if weapon and weapon.BulletPenetrate then
+								weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+							end
 						end
-					end
-				})
-			end)
+					})
+				end)
+			end
 
 			return true
 		end
@@ -576,34 +580,35 @@ function M9KR.Penetration.DynamicPenetration(weapon, bouncenum, attacker, tr, pa
 	if not IsValid(attacker) or not attacker.FireBullets then return false end
 
 	-- Use timer to prevent crashing (must execute outside bullet callback context)
-	timer.Simple(0, function()
-		if CLIENT then return end  -- FireBullets only on server
-		if not IsValid(attacker) then return end
-		attacker:FireBullets({
-			Attacker = attacker,
-			Damage = paininfo.Damage * 0.75,  -- 75% damage after penetration
-			Force = paininfo.Force,
-			Num = 1,
-			Src = exitPos,
-			Dir = tr.Normal,  -- tr.Normal is the bullet direction in callback context
-			HullSize = 0,
-			Spread = Vector(0, 0, 0),
-			Tracer = 0,  -- No tracers for penetration bullets
-			TracerName = "",
-			Callback = function(cb_attacker, tracedata, dmginfo)
-				-- Match legacy M9K: check prediction in nested callbacks
-				if not IsFirstTimePredicted() then return end
-				if not IsValid(weapon) then return end
-				if not IsValid(cb_attacker) then return end
-				if not tracedata or not dmginfo then return end
-				local paininfo_cb = {
-					Damage = dmginfo:GetDamage(),
-					Force = dmginfo:GetDamageForce()
-				}
-				if weapon and weapon.BulletPenetrate then weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb) end
-			end
-		})
-	end)
+	if SERVER then
+		timer.Simple(0, function()
+			if not IsValid(attacker) then return end
+			attacker:FireBullets({
+				Attacker = attacker,
+				Damage = paininfo.Damage * 0.75,  -- 75% damage after penetration
+				Force = paininfo.Force,
+				Num = 1,
+				Src = exitPos,
+				Dir = tr.Normal,  -- tr.Normal is the bullet direction in callback context
+				HullSize = 0,
+				Spread = Vector(0, 0, 0),
+				Tracer = 0,  -- No tracers for penetration bullets
+				TracerName = "",
+				Callback = function(cb_attacker, tracedata, dmginfo)
+					-- Match legacy M9K: check prediction in nested callbacks
+					if not IsFirstTimePredicted() then return end
+					if not IsValid(weapon) then return end
+					if not IsValid(cb_attacker) then return end
+					if not tracedata or not dmginfo then return end
+					local paininfo_cb = {
+						Damage = dmginfo:GetDamage(),
+						Force = dmginfo:GetDamageForce()
+					}
+					if weapon and weapon.BulletPenetrate then weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb) end
+				end
+			})
+		end)
+	end
 
 	return true
 end
