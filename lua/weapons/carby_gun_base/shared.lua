@@ -1413,15 +1413,15 @@ function SWEP:Reload()
 		end
 	end
 
+	if self.Weapon:Clip1() < self.Primary.ClipSize and not self.Owner:IsNPC() then
+		self:SetIronsights(false)
+		self.Weapon:SetNWBool("Reloading", true)
+
+		-- Show reload animation to other players
+		self.Owner:SetAnimation(PLAYER_RELOAD)
+	end
+
 	if SERVER and IsValid(self.Weapon) then
-		if self.Weapon:Clip1() < self.Primary.ClipSize and not self.Owner:IsNPC() then
-			self:SetIronsights(false)
-			self.Weapon:SetNWBool("Reloading", true)
-
-			-- Show reload animation to other players
-			self.Owner:SetAnimation(PLAYER_RELOAD)
-		end
-
 		local waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
 		local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
 		timer.Create(reloadTimerName, waitdammit + 0.1, 1, function()
@@ -1729,11 +1729,6 @@ function SWEP:IronSight()
 	if not self.Owner:IsNPC() then
 		if self.ResetSights and CurTime() >= self.ResetSights then
 			self.ResetSights = nil
-
-			-- Clear CLIENT reloading flag so predicted Reload() calls can proceed
-			if CLIENT then
-				self.Weapon:SetNWBool("Reloading", false)
-			end
 
 			if self.Silenced then
 				self:SendWeaponAnim(ACT_VM_IDLE_SILENCED)
