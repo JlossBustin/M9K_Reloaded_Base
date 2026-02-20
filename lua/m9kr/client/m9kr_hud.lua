@@ -20,8 +20,7 @@
 	Only active when holding an M9K weapon; default GMod HUD shows otherwise.
 ]]--
 
--- ConVar to toggle between custom HUD and standard GMod HUD
-CreateClientConVar("m9kr_hud_mode", "4", true, false, "M9K:R HUD Mode: 0 = GMod Default, 1 = Weapon HUD, 2 = Weapon + Squad, 3 = Weapon + Health/Armor, 4 = Full HUD", 0, 4)
+-- ConVar: m9kr_hud_mode (server-controlled, defined in m9kr_autoload.lua)
 
 -- Create custom fonts for HUD elements
 surface.CreateFont("M9KR_AmmoLarge", {

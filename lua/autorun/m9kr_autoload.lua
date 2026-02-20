@@ -57,6 +57,8 @@ if SERVER then
 		"Dust impact effects: 0 = GMod Default, 1 = M9K Custom", 0, 1)
 	CreateConVar("m9kr_muzzle_heatwave", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
 		"Muzzle heatwave level: 0 = Disabled, 1 = Full (100%), 2 = Reduced (50%)", 0, 2)
+	CreateConVar("m9kr_hud_mode", "4", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
+		"M9K:R HUD Mode: 0 = GMod Default, 1 = Weapon HUD, 2 = Weapon + Squad, 3 = Weapon + Health/Armor, 4 = Full HUD", 0, 4)
 end
 
 -- ============================================================================
