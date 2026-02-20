@@ -1391,47 +1391,6 @@ function SWEP:GetViewModelPosition(pos, ang)
 	pos = pos + targetPos.y * Forward
 	pos = pos + targetPos.z * Up
 
-	-- TFA-Style Viewmodel Recoil Scaling
-	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		-- Allow complete disabling of viewmodel recoil when ADS (like TFA's cl_tfa_viewmodel_vp_enabled)
-		local enableViewmodelRecoil = self.ViewModelRecoilEnabled_IronSights
-		if enableViewmodelRecoil == nil then
-			enableViewmodelRecoil = true  -- Default: enabled
-		end
-
-		-- Get ViewPunch values (accumulated recoil)
-		local viewPunchP = self.ViewPunchP or 0
-		local viewPunchY = self.ViewPunchY or 0
-
-		-- Calculate scaled multipliers based on ADS state using IronSightsProgress
-		local pitchMult = Lerp(self.IronSightsProgress,
-			self.ViewModelPunchPitchMultiplier or 0.5,
-			enableViewmodelRecoil and 0.25 or 0)
-
-		-- Yaw ViewPunch is always zeroed when ADS: fire_ads animation already
-		-- provides stabilized visual recoil, so additional horizontal viewmodel
-		-- kick from ViewPunch causes unwanted sideways muzzle deviation.
-		local yawMult = Lerp(self.IronSightsProgress,
-			self.ViewModelPunchYawMultiplier or 0.5,
-			0)
-
-		local verticalMult = Lerp(self.IronSightsProgress,
-			self.ViewModelPunch_VerticalMultiplier or 0.3,
-			enableViewmodelRecoil and 0.1 or 0)
-
-		local maxVerticalOffset = Lerp(self.IronSightsProgress,
-			self.ViewModelPunch_MaxVerticalOffset or 3,
-			enableViewmodelRecoil and 1 or 0)
-
-		-- Apply scaled rotation recoil
-		ang:RotateAroundAxis(ang:Right(), -viewPunchP * pitchMult)
-		ang:RotateAroundAxis(ang:Up(), viewPunchY * yawMult)
-
-		-- Apply scaled backward push (negative Y = backward)
-		local backwardPush = math.Clamp(viewPunchP * verticalMult, -maxVerticalOffset, maxVerticalOffset)
-		pos = pos - Forward * backwardPush
-	end
-
 	-- Apply crouch positioning offset with smooth ADS transition
 	if self.CrouchPos and self.CrouchAng and self.CrouchProgress > 0.001 then
 		-- Additional safety checks for weapon state transitions
