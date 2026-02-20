@@ -2,30 +2,22 @@
 
 include("shared.lua")
 
--- ============================================================================
 -- Client-side Animation Variable Defaults
--- ============================================================================
 
-SWEP.BreathIntensity = 0 -- Smooth breath intensity
-SWEP.WalkIntensity = 0 -- Smooth walk intensity
-SWEP.SprintIntensity = 0 -- Smooth sprint intensity
-SWEP.JumpVelocity = 0 -- Vertical velocity for jump tracking
-SWEP.JumpVelocitySmooth = 0 -- Smoothed vertical velocity
-SWEP.LateralVelocity = 0 -- Horizontal velocity for tilt
-SWEP.LateralVelocitySmooth = 0 -- Smoothed lateral velocity
-SWEP.LastGroundState = true -- Track if player was on ground last frame
-
--- ============================================================================
--- DrawWeaponSelection - Draw weapon icon in weapon selection HUD
--- ============================================================================
+SWEP.BreathIntensity = 0
+SWEP.WalkIntensity = 0
+SWEP.SprintIntensity = 0
+SWEP.JumpVelocity = 0
+SWEP.JumpVelocitySmooth = 0
+SWEP.LateralVelocity = 0
+SWEP.LateralVelocitySmooth = 0
+SWEP.LastGroundState = true
 
 function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
-	-- Lazy load icon material if not already loaded
 	if not self.WepSelectIconMat and self.Gun then
 		self.WepSelectIconMat = Material("vgui/hud/" .. self.Gun)
 	end
 
-	-- Draw if we have a valid material (not error material)
 	if self.WepSelectIconMat and not self.WepSelectIconMat:IsError() then
 		surface.SetDrawColor(255, 255, 255, alpha)
 		surface.SetMaterial(self.WepSelectIconMat)
@@ -38,23 +30,15 @@ function SWEP:DrawWeaponSelection(x, y, wide, tall, alpha)
 	end
 end
 
--- ============================================================================
 -- ADS / Sprint / Safety / FOV Input State Management
--- ============================================================================
-
--- ADS sounds
 local IRON_IN_SOUND = "m9k_indicators/ironin.wav"
 local IRON_OUT_SOUND = "m9k_indicators/ironout.wav"
 
--- FOV transition constants
 local FOV_TRANSITION_FAST = 0.2
 local FOV_TRANSITION_NORMAL = 0.2
 local FOV_TRANSITION_SAFETY = 0.25
 local FOV_TRANSITION_FROM_SPRINT = 0.35
 
---[[
-	Start a smooth FOV transition on this weapon
-]]
 function SWEP:M9KR_StartFOVTransition(targetFOV, duration)
 	if not IsValid(self.Owner) then return end
 
@@ -71,9 +55,6 @@ function SWEP:M9KR_StartFOVTransition(targetFOV, duration)
 	self.m9kr_FOVTransitionDuration = duration or FOV_TRANSITION_NORMAL
 end
 
---[[
-	Get the ADS target FOV for this weapon
-]]
 function SWEP:M9KR_GetADSTargetFOV()
 	if self.Scoped and self.Secondary and self.Secondary.ScopeZoom then
 		return 75 / self.Secondary.ScopeZoom
@@ -83,10 +64,6 @@ function SWEP:M9KR_GetADSTargetFOV()
 	return 0
 end
 
---[[
-	Update weapon input state (ADS, sprint, safety, reload, USE key)
-	Called every frame from Think(). Manages ADS, sprint, safety, reload, and FOV state.
-]]
 function SWEP:UpdateWeaponInputState()
 	if not IsValid(self) or not IsValid(self.Owner) then return end
 
@@ -101,9 +78,6 @@ function SWEP:UpdateWeaponInputState()
 	local isActuallySprinting = speedDown and isOnGround and ply:GetVelocity():Length2D() > 20 and isPressingMovement
 	local isSprintJumping = speedDown and not isOnGround
 
-	-- =====================
-	-- USE KEY STATE
-	-- =====================
 	-- USE just pressed — force exit ADS
 	if useDown and not self.m9kr_LastUseState and not isSafe then
 		if self.m9kr_IsInADS then
@@ -122,17 +96,13 @@ function SWEP:UpdateWeaponInputState()
 
 	self.m9kr_LastUseState = useDown
 
-	-- =====================
-	-- ADS STATE
-	-- =====================
-	-- ATTACK2 just pressed (not blocked by USE/sprint/reload/safety/sprint-jump)
+	-- ADS toggle
 	if attack2Down and not self.m9kr_LastAttack2State and not useDown and not isActuallySprinting and not isReloading and not isSafe and not isSprintJumping then
 		self:M9KR_StartFOVTransition(self:M9KR_GetADSTargetFOV(), FOV_TRANSITION_NORMAL)
 		self.m9kr_IsInADS = true
 		self:EmitSound(IRON_IN_SOUND, 50, 100)
 	end
 
-	-- ATTACK2 just released — exit ADS (only if we were in ADS)
 	if not attack2Down and self.m9kr_LastAttack2State and not useDown and self.m9kr_IsInADS then
 		self:M9KR_StartFOVTransition(0, FOV_TRANSITION_FAST)
 		self.m9kr_IsInADS = false
@@ -146,7 +116,6 @@ function SWEP:UpdateWeaponInputState()
 		self.m9kr_Attack2HeldDuringSprint = attack2Down
 	end
 
-	-- Track ATTACK2 pressed during sprint (for re-entering ADS after sprint)
 	if isActuallySprinting and attack2Down and not self.m9kr_IsInADS and not useDown then
 		self.m9kr_Attack2HeldDuringSprint = true
 	end
@@ -159,16 +128,13 @@ function SWEP:UpdateWeaponInputState()
 		self.m9kr_Attack2HeldDuringSprint = false
 	end
 
-	-- Clear sprint-ADS flag when ATTACK2 released
 	if not attack2Down then
 		self.m9kr_Attack2HeldDuringSprint = false
 	end
 
 	self.m9kr_LastAttack2State = attack2Down
 
-	-- =====================
-	-- SPRINT STATE
-	-- =====================
+	-- Sprint state
 	local shouldSprint = isActuallySprinting and not self.m9kr_IsInADS and not isSafe
 
 	if shouldSprint and not self.m9kr_IsInSprint then
@@ -181,12 +147,9 @@ function SWEP:UpdateWeaponInputState()
 		self.WalkIntensity = 0
 	end
 
-	-- Sprint-jumping flag (allows shooting mid-air)
 	self.SprintJumping = isSprintJumping
 
-	-- =====================
-	-- SAFETY STATE
-	-- =====================
+	-- Safety state
 	if isSafe ~= self.m9kr_LastSafetyState then
 		if isSafe then
 			self:M9KR_StartFOVTransition(0, FOV_TRANSITION_SAFETY)
@@ -195,16 +158,12 @@ function SWEP:UpdateWeaponInputState()
 	end
 	self.m9kr_LastSafetyState = isSafe
 
-	-- =====================
-	-- RELOAD STATE
-	-- =====================
-	-- Just started reloading — force exit ADS
+	-- Reload state
 	if isReloading and not self.m9kr_LastReloadState then
 		self:M9KR_StartFOVTransition(0, FOV_TRANSITION_FAST)
 		self.m9kr_IsInADS = false
 	end
 
-	-- Just finished reloading — re-enter ADS if ATTACK2 still held
 	if not isReloading and self.m9kr_LastReloadState then
 		if attack2Down and not useDown and not isActuallySprinting then
 			self:M9KR_StartFOVTransition(self:M9KR_GetADSTargetFOV(), FOV_TRANSITION_NORMAL)
@@ -213,9 +172,7 @@ function SWEP:UpdateWeaponInputState()
 	end
 	self.m9kr_LastReloadState = isReloading
 
-	-- =====================
-	-- FOV TRANSITION UPDATE
-	-- =====================
+	-- FOV transition update
 	local elapsed = CurTime() - (self.m9kr_FOVTransitionStart or 0)
 	local dur = self.m9kr_FOVTransitionDuration or 0.2
 	local t = math.Clamp(elapsed / dur, 0, 1)
@@ -223,15 +180,12 @@ function SWEP:UpdateWeaponInputState()
 
 	local newFOV = Lerp(t, self.m9kr_FOVStart or 0, self.m9kr_FOVTarget or 0)
 	if t >= 1 and self.m9kr_FOVReturningToDefault then
-		-- Transition back to default complete — stop overriding FOV
 		self.m9kr_FOVCurrent = 0
 	else
 		self.m9kr_FOVCurrent = newFOV
 	end
 
-	-- =====================
-	-- SCOPED VIEWMODEL VISIBILITY
-	-- =====================
+	-- Scoped viewmodel visibility
 	if self.Scoped and self.m9kr_IsInADS then
 		self.ShouldDrawViewModel = false
 		self.isScoped = true
@@ -241,10 +195,6 @@ function SWEP:UpdateWeaponInputState()
 	end
 end
 
--- ============================================================================
--- CalcView - Smooth FOV transitions for ADS/scope zoom
--- ============================================================================
-
 function SWEP:CalcView(ply, origin, angles, fov)
 	if not IsValid(ply) or ply ~= LocalPlayer() then return end
 
@@ -253,10 +203,6 @@ function SWEP:CalcView(ply, origin, angles, fov)
 		return origin, angles, currentFOV
 	end
 end
-
--- ============================================================================
--- UpdateProgressRatios - TFA-style lightweight progress value updates
--- ============================================================================
 
 local function mathApproach(current, target, delta)
 	delta = math.abs(delta)
@@ -274,7 +220,6 @@ function SWEP:UpdateProgressRatios()
 	local bCrouching = self.Owner:KeyDown(IN_DUCK) or self.Owner:Crouching()
 	local bReloading = self.Weapon:GetNWBool("Reloading", false)
 
-	-- Initialize progress values if they don't exist
 	self.IronSightsProgress = self.IronSightsProgress or 0
 	self.SprintProgress = self.SprintProgress or 0
 	self.SafetyProgress = self.SafetyProgress or 0
@@ -282,21 +227,19 @@ function SWEP:UpdateProgressRatios()
 
 	local ft = FrameTime()
 
-	-- Calculate targets
 	-- When reloading, use idle positioning (not sprint) - player can still move with walking bob/tilt
 	local ironTarget = (bIron and not bSafe) and 1 or 0
 	local sprintTarget = (bSprint and not bSafe and not bIron and not bReloading) and 1 or 0
 	local safetyTarget = bSafe and 1 or 0
 	local crouchTarget = bCrouching and 1 or 0
 
-	-- Calculate speeds (must match IRONSIGHT_TIME)
+	-- Speeds must match IRONSIGHT_TIME
 	local IRONSIGHT_TIME = 0.55
 	local adsTransitionSpeed = 12.5 / (IRONSIGHT_TIME / 0.3)
 	local sprintTransitionSpeed = 7.5
 	local safetyTransitionSpeed = 12.5 / ((IRONSIGHT_TIME * 0.5) / 0.3)
 	local crouchTransitionSpeed = 2.5
 
-	-- Update progress values using TFA-style approach (simple float lerping)
 	self.IronSightsProgress = mathApproach(
 		self.IronSightsProgress,
 		ironTarget,
@@ -322,14 +265,6 @@ function SWEP:UpdateProgressRatios()
 	)
 end
 
--- ============================================================================
--- Safety Transition Multiplier
--- ============================================================================
-
---[[
-	GetSafetyTransitionMul - Smooth transition multiplier for viewmodel safety animation
-	Returns 0-1 value for lerping viewmodel position during safety transitions
-]]--
 function SWEP:GetSafetyTransitionMul()
 	if not self.GetIsOnSafe then return 0 end
 	if not self:GetIsOnSafe() then return 0 end
@@ -339,15 +274,6 @@ function SWEP:GetSafetyTransitionMul()
 	return math.Clamp(elapsed / transitionTime, 0, 1)
 end
 
--- ============================================================================
--- Viewmodel Bone Modifications
--- ============================================================================
-
---[[
-	ApplyViewModelBoneMods - Apply custom bone modifications to viewmodel
-	Uses ManipulateBone* functions for persistent, animation-friendly modifications.
-	Called from PreDrawViewModel hook.
-]]--
 function SWEP:ApplyViewModelBoneMods(vm)
 	if not IsValid(vm) then return end
 	if not self.ViewModelBoneMods then return end
@@ -369,10 +295,6 @@ function SWEP:ApplyViewModelBoneMods(vm)
 	end
 end
 
---[[
-	ResetViewModelBones - Reset all bone modifications on a viewmodel
-	Clears ManipulateBone* changes. Called from Deploy/Holster/reload paths.
-]]--
 function SWEP:ResetViewModelBones(vm)
 	if not IsValid(vm) then return end
 	if vm:GetBoneCount() == 0 then return end
@@ -385,13 +307,8 @@ function SWEP:ResetViewModelBones(vm)
 	end
 end
 
--- ============================================================================
 -- Belt-Fed Weapon Support
 -- Supports 3 belt display methods: bone-based, bodygroup-based, multi-bodygroup
--- ============================================================================
-
--- Belt helper: Update bone-based belt (like MG4)
--- Scales bullet bones to 0 when ammo is at or below their threshold
 local function BeltUpdateBones(vm, weapon, showAll)
 	local beltChain = weapon.BeltChain
 	if not beltChain then return end
@@ -410,13 +327,11 @@ local function BeltUpdateBones(vm, weapon, showAll)
 	end
 end
 
--- Belt helper: Update bodygroup-based belt (like Ameli)
 local function BeltUpdateBodygroup(vm, weapon, bodygroup)
 	vm:SetBodygroup(weapon.BeltBG, bodygroup)
 end
 
--- Belt helper: Update multi-bodygroup belt (like Stoner 63)
--- Each bullet is a separate bodygroup with states: 0=visible, 1=blank
+-- Each bullet is a separate bodygroup: 0=visible, 1=blank
 local function BeltUpdateMultiBodygroup(vm, weapon, showAll)
 	local beltBodygroups = weapon.BeltBodygroups
 	if not beltBodygroups then return end
@@ -432,7 +347,6 @@ local function BeltUpdateMultiBodygroup(vm, weapon, showAll)
 	end
 end
 
--- Belt helper: Reset all bodygroups on a viewmodel
 -- Bodygroups persist on the viewmodel entity across model changes
 local function BeltResetAllBodygroups(vm)
 	if not IsValid(vm) then return end
@@ -441,11 +355,6 @@ local function BeltResetAllBodygroups(vm)
 	end
 end
 
---[[
-	UpdateBeltAmmo - Update belt-fed weapon display based on ammo and reload state
-	Supports 3 belt types: bone-based, bodygroup-based, multi-bodygroup
-	Called from Think() CLIENT block.
-]]--
 function SWEP:UpdateBeltAmmo()
 	local ply = self.Owner
 	if not IsValid(ply) then return end
@@ -453,7 +362,7 @@ function SWEP:UpdateBeltAmmo()
 	local vm = ply:GetViewModel()
 	if not IsValid(vm) then return end
 
-	-- Detect viewmodel model change (bones/bodygroups persist across model changes)
+	-- Bones/bodygroups persist across model changes, so detect and reset
 	local currentVMModel = vm:GetModel()
 	if self.m9kr_BeltLastModel ~= currentVMModel then
 		self.m9kr_BeltNeedsBoneReset = true
@@ -462,19 +371,16 @@ function SWEP:UpdateBeltAmmo()
 		self.m9kr_BeltLastModel = currentVMModel
 	end
 
-	-- Determine belt type
 	local isBoneBased = self.BeltChain ~= nil
 	local isBodygroupBased = self.BeltBG ~= nil and self.BeltMax ~= nil
 	local isMultiBodygroup = self.BeltBodygroups ~= nil
 
-	-- If weapon has no belt system, nothing to do
 	if not isBoneBased and not isBodygroupBased and not isMultiBodygroup then return end
 
-	-- Check if reloading
 	local isReloading = self.Reloading or self:GetNWBool("Reloading", false)
 
 	if isBoneBased then
-		-- BONE-BASED BELT (like MG4)
+		-- Bone-based belt
 		if isReloading then
 			if not self.m9kr_BeltReloadStart then
 				self.m9kr_BeltReloadStart = CurTime()
@@ -510,9 +416,7 @@ function SWEP:UpdateBeltAmmo()
 		end
 
 	elseif isBodygroupBased then
-		-- BODYGROUP-BASED BELT (like Ameli)
-		-- Compute desired bodygroup state here, but APPLY in PreDrawViewModel
-		-- (bodygroups set in Think() get reset by the engine's animation system before rendering)
+		-- Bodygroup-based belt (applied in PreDrawViewModel; engine resets bodygroups before render)
 		if isReloading then
 			if not self.m9kr_BeltReloadStart then
 				self.m9kr_BeltReloadStart = CurTime()
@@ -545,8 +449,7 @@ function SWEP:UpdateBeltAmmo()
 		end
 
 	elseif isMultiBodygroup then
-		-- MULTI-BODYGROUP BELT (like Stoner 63)
-		-- Compute desired bodygroup states here, but APPLY in PreDrawViewModel
+		-- Multi-bodygroup belt (applied in PreDrawViewModel)
 		if isReloading then
 			if not self.m9kr_BeltReloadStart then
 				self.m9kr_BeltReloadStart = CurTime()
@@ -584,19 +487,15 @@ function SWEP:UpdateBeltAmmo()
 	end
 end
 
--- PreDrawViewModel hook: viewmodel bone mods, belt bone reset, visibility control
--- Thin global hook that delegates to SWEP methods
 hook.Add("PreDrawViewModel", "M9KR_ViewModelHandler", function(vm, ply, weapon)
 	if not IsValid(vm) then return end
 	if not IsValid(weapon) then return end
 
-	-- Hide viewmodel when scoped weapon is in ADS
 	if weapon.ShouldDrawViewModel == false then
 		return true
 	end
 
-	-- Belt-fed: reset all bones + bodygroups on viewmodel model change
-	-- This fires AFTER the new model is loaded, ensuring safe manipulation
+	-- Reset bones/bodygroups after viewmodel model change
 	if weapon.m9kr_BeltNeedsBoneReset then
 		local boneCount = vm:GetBoneCount() or 0
 		for boneID = 0, math.max(boneCount, 128) do
@@ -608,18 +507,15 @@ hook.Add("PreDrawViewModel", "M9KR_ViewModelHandler", function(vm, ply, weapon)
 		weapon.m9kr_BeltNeedsBoneReset = false
 	end
 
-	-- Apply viewmodel bone modifications
 	if weapon.ApplyViewModelBoneMods and weapon.ViewModelBoneMods then
 		weapon:ApplyViewModelBoneMods(vm)
 	end
 
-	-- Apply bodygroup-based belt state (must be set in PreDrawViewModel, not Think,
-	-- because the engine's animation system resets bodygroups before rendering)
+	-- Must be set here, not Think (engine resets bodygroups before rendering)
 	if weapon.BeltBG and weapon.m9kr_BeltBodygroupValue ~= nil then
 		vm:SetBodygroup(weapon.BeltBG, weapon.m9kr_BeltBodygroupValue)
 	end
 
-	-- Apply multi-bodygroup belt state
 	if weapon.BeltBodygroups then
 		if weapon.m9kr_BeltMultiHideAll then
 			for threshold, bgIndex in pairs(weapon.BeltBodygroups) do
@@ -638,16 +534,12 @@ hook.Add("PreDrawViewModel", "M9KR_ViewModelHandler", function(vm, ply, weapon)
 	end
 end)
 
--- PostDrawViewModel: fallback for deferred effects on models without QC animation events
--- Muzzle flash and shell eject effects are queued during prediction and normally consumed
--- by FireAnimationEvent during render at QC-accurate timing. This hook ONLY acts as
--- fallback for models that lack QC events entirely (no muzzle flash or EjectBrass events).
--- Uses two-stage detection: first checks if the model has ever produced QC events (fast path),
--- then falls back to a time-delayed check for models without QC events.
+-- Fallback for models without QC animation events (no muzzle flash or EjectBrass events).
+-- Effects are normally consumed by FireAnimationEvent; this fires only after a time delay
+-- if no QC event was detected.
 hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
 	if not IsValid(weapon) then return end
 
-	-- Muzzle flash fallback: only for models without QC muzzle flash events
 	if weapon.m9kr_PendingMuzzleFlash and not weapon.m9kr_HasQCMuzzleEvent then
 		local elapsed = CurTime() - (weapon.m9kr_PendingMuzzleFlash.time or 0)
 		if elapsed > 0.3 then
@@ -679,7 +571,6 @@ hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
 		end
 	end
 
-	-- Shell eject fallback: only for models without QC EjectBrass events
 	if weapon.m9kr_PendingShellEject and not weapon.m9kr_HasQCShellEvent then
 		local elapsed = CurTime() - (weapon.m9kr_PendingShellEjectTime or 0)
 		if elapsed > 0.3 then
@@ -692,15 +583,10 @@ hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
 	end
 end)
 
--- ============================================================================
 -- Low Ammo Warning System
--- Plays caliber-specific warning sounds when ammo is low
--- ============================================================================
 
--- ConVar for low ammo threshold
 CreateClientConVar("m9kr_low_ammo_threshold", "33", true, false, "Low ammo warning threshold (percentage of magazine)", 0, 100)
 
--- Ammo type to low ammo sound mapping (caliber-specific sounds)
 local LowAmmoSoundByAmmoType = {
 	["pistol"] = "m9k_indicators/lowammo_indicator_handgun.wav",
 	["357"] = "m9k_indicators/lowammo_indicator_revolver.wav",
@@ -723,7 +609,6 @@ local LastAmmoSoundByAmmoType = {
 	["AirboatGun"] = "m9k_indicators/lowammo_dry_shotgun_auto.wav",
 }
 
--- Precache all low ammo sounds
 for _, soundPath in pairs(LowAmmoSoundByAmmoType) do
 	util.PrecacheSound(soundPath)
 end
@@ -731,35 +616,23 @@ for _, soundPath in pairs(LastAmmoSoundByAmmoType) do
 	util.PrecacheSound(soundPath)
 end
 
---[[
-	CheckLowAmmo - Check ammo and play caliber-specific warning sounds
-	Called from PrimaryAttack/FireBurstShot AFTER TakePrimaryAmmo.
-	Clip1() is already decremented, so no prediction trick needed.
-]]--
+-- Called after TakePrimaryAmmo; Clip1() is already decremented.
 function SWEP:CheckLowAmmo()
-	-- Skip weapons that have disabled low ammo warnings (bows, crossbows, etc.)
 	if self.NoLowAmmoWarning then return end
-
-	-- Verify weapon has proper primary structure
 	if not self.Primary or not self.Primary.ClipSize then return end
 
 	local clip = self:Clip1()
 	local maxClip = self.Primary.ClipSize
 
-	-- Don't warn for weapons with no magazine (like shotguns that feed directly)
 	if maxClip <= 1 then return end
 
-	-- Calculate ammo percentage
 	local threshold = GetConVar("m9kr_low_ammo_threshold"):GetInt() / 100
 	local isLowAmmo = clip <= (maxClip * threshold) and clip > 0
 
-	-- Play low ammo sound when in low ammo state
 	-- For high-RPM weapons with SoundIndicatorInterval, throttle the warning sound
-	-- Otherwise play on EVERY shot (TFA-style behavior)
 	if isLowAmmo then
 		local shouldPlayWarning = true
 
-		-- Check if weapon uses SoundIndicatorInterval (high-RPM weapons like minigun)
 		if self.SoundIndicatorInterval then
 			self.m9kr_LowAmmoShotsSinceWarning = (self.m9kr_LowAmmoShotsSinceWarning or 0) + 1
 			shouldPlayWarning = (self.m9kr_LowAmmoShotsSinceWarning >= self.SoundIndicatorInterval)
@@ -773,7 +646,6 @@ function SWEP:CheckLowAmmo()
 			local ammoTypeName = game.GetAmmoName(ammoType) or "ar2"
 			local snd = LowAmmoSoundByAmmoType[ammoTypeName] or "m9k_indicators/lowammo_indicator_ar.wav"
 
-			-- Semi-auto snipers (DMRs) get a distinct sound from bolt-action
 			if ammoTypeName == "SniperPenetratedRound" and not self.BoltAction then
 				snd = "m9k_indicators/lowammo_indicator_dmr.wav"
 			end
@@ -782,8 +654,6 @@ function SWEP:CheckLowAmmo()
 		end
 	end
 
-	-- Detect last round fired (clip just hit 0)
-	-- Always plays regardless of SoundIndicatorInterval since it's a one-time event
 	if clip == 0 then
 		local ammoType = self:GetPrimaryAmmoType()
 		local ammoTypeName = game.GetAmmoName(ammoType) or "ar2"
@@ -796,36 +666,26 @@ function SWEP:CheckLowAmmo()
 
 		self:EmitSound(snd, 60, 100, 0.5, CHAN_AUTO)
 
-		-- Reset warning counter when mag empties
 		self.m9kr_LowAmmoShotsSinceWarning = 0
 	end
 
-	-- Reset counter when transitioning into low ammo state (so first warning plays immediately)
+	-- Reset so first warning plays immediately on transition into low ammo
 	if isLowAmmo and not self.m9kr_LowAmmoWasLow then
 		self.m9kr_LowAmmoShotsSinceWarning = self.SoundIndicatorInterval or 0
 	end
 
-	-- Update state
 	self.m9kr_LowAmmoWasLow = isLowAmmo
 end
 
--- ============================================================================
 -- Worldmodel Shell Ejection
--- Spawns shell casings for other players' weapons (viewmodel shells are
--- handled by SWEP:EjectShell in shared.lua)
--- ============================================================================
+-- Viewmodel shells are handled by SWEP:EjectShell in shared.lua
 
--- Universal shell ejection offsets (applied to all weapons)
 local ShellEjectionOffset = {
-	Forward = 5,   -- Units forward from weapon position
-	Right = 2,     -- Units right from weapon position
-	Up = 1         -- Units up from weapon position
+	Forward = 5,
+	Right = 2,
+	Up = 1
 }
 
---[[
-	CalculateWorldmodelShellPos - Calculate worldmodel shell spawn position
-	Uses universal offset formula applied to weapon's local coordinate space.
-]]--
 function SWEP:CalculateWorldmodelShellPos()
 	local wepPos = self:GetPos()
 	local wepAng = self:GetAngles()
@@ -835,16 +695,11 @@ function SWEP:CalculateWorldmodelShellPos()
 		wepAng:Right() * ShellEjectionOffset.Right +
 		wepAng:Up() * ShellEjectionOffset.Up
 
-	-- Shell ejects to the right (90 degrees from forward)
 	local shellAng = Angle(wepAng.p, wepAng.y + 90, wepAng.r)
 
 	return shellPos, shellAng
 end
 
---[[
-	SpawnWorldmodelShell - Spawn a shell casing from the worldmodel
-	Used for other players' weapons (third-person view).
-]]--
 function SWEP:SpawnWorldmodelShell()
 	if not self.ShellModel then return end
 
@@ -859,12 +714,9 @@ function SWEP:SpawnWorldmodelShell()
 	util.Effect("m9kr_shell", effectData)
 end
 
--- EntityFireBullets hook: spawn worldmodel shells for other players
--- The local player's shells are handled by SWEP:EjectShell (viewmodel)
 hook.Add("EntityFireBullets", "M9KR_WorldmodelShells", function(entity, data)
 	if not IsValid(entity) then return end
 
-	-- Resolve the player who fired
 	local owner
 	if entity:IsPlayer() then
 		owner = entity
@@ -876,25 +728,18 @@ hook.Add("EntityFireBullets", "M9KR_WorldmodelShells", function(entity, data)
 
 	if not IsValid(owner) or not owner:IsPlayer() then return end
 
-	-- Local player shells are handled by viewmodel EjectShell
 	if owner == LocalPlayer() then return end
 
 	local weapon = owner:GetActiveWeapon()
 	if not IsValid(weapon) or not weapon.ShellModel then return end
 
-	-- Call SpawnWorldmodelShell if it exists (M9KR weapons)
 	if weapon.SpawnWorldmodelShell then
 		weapon:SpawnWorldmodelShell()
 	end
 end)
 
--- ============================================================================
 -- Bullet Impact Effects
--- Spawns custom dust/smoke/sparks on bullet impact for M9KR weapons
--- Must be a global hook (impacts need to show for ALL players' bullets)
--- ConVars: m9kr_bullet_impact, m9kr_metal_impact, m9kr_dust_impact
--- (created server-side in m9kr_autoload.lua, replicated to clients)
--- ============================================================================
+-- ConVars created server-side in m9kr_autoload.lua, replicated to clients
 
 local M9KR_BulletImpact = GetConVar("m9kr_bullet_impact")
 local M9KR_MetalImpact = GetConVar("m9kr_metal_impact")
@@ -902,7 +747,6 @@ local M9KR_MetalImpact = GetConVar("m9kr_metal_impact")
 hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 	if not IsValid(entity) then return end
 
-	-- Get weapon from entity (entity could be player or weapon)
 	local wep
 	if entity:IsPlayer() then
 		wep = entity:GetActiveWeapon()
@@ -914,10 +758,8 @@ hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 
 	if not IsValid(wep) then return end
 
-	-- Check if it's an M9K:R weapon
 	if not wep.Base or not M9KR.WeaponBases[wep.Base] then return end
 
-	-- Use the Callback to spawn impact effects
 	local originalCallback = data.Callback
 	data.Callback = function(attacker, tr, dmginfo)
 		local result
@@ -925,9 +767,8 @@ hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 			result = originalCallback(attacker, tr, dmginfo)
 		end
 
-		-- Only spawn effects once per shot (prediction check)
 		if IsFirstTimePredicted() and tr.HitPos then
-			-- Skip smoke plume effects for flesh (use default GMod blood effects)
+			-- Skip for flesh (use default GMod blood effects)
 			if tr.MatType == MAT_FLESH or tr.MatType == MAT_ALIENFLESH then
 				return result
 			end
@@ -937,7 +778,6 @@ hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 			fx:SetNormal(tr.HitNormal or Vector(0, 0, 1))
 			fx:SetEntity(entity)
 
-			-- Get caliber data for scaling (default to rifle caliber: 14)
 			local penetration = 14
 			if IsValid(wep) and wep.ShellModel and M9KR and M9KR.Ballistics then
 				local ballisticsData = M9KR.Ballistics.GetData(wep.ShellModel)
@@ -948,7 +788,6 @@ hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 
 			fx:SetMagnitude(penetration)
 
-			-- Determine which effect to spawn
 			local effectName = nil
 			if tr.MatType == MAT_METAL and M9KR_MetalImpact:GetInt() == 1 then
 				effectName = "m9kr_metal_impact"
@@ -965,27 +804,21 @@ hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 	end
 end)
 
--- ============================================================================
 -- GetViewModelPosition
--- ============================================================================
 
 function SWEP:GetViewModelPosition(pos, ang)
-	-- Critical safety checks for weapon state transitions and menu interactions
 	if not IsValid(self) or not IsValid(self.Weapon) then
 		return pos, ang
 	end
 
-	-- Check if weapon is being removed or in invalid state
 	if not self.Weapon.GetClass or not self.Weapon:GetClass() then
 		return pos, ang
 	end
 
-	-- Check if owner is valid
 	if not IsValid(self.Owner) or not self.Owner:IsPlayer() then
 		return pos, ang
 	end
 
-	-- Additional safety check for essential weapon properties
 	if not self.IronSightsPos then
 		return pos, ang
 	end
@@ -994,10 +827,8 @@ function SWEP:GetViewModelPosition(pos, ang)
 	local bSprint = self.m9kr_IsInSprint or false
 	local bReloading = self.Weapon:GetNWBool("Reloading")
 
-	-- Check if player is crouching OR holding crouch key (for smooth transitions)
 	local bCrouching = false
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		-- Use KeyDown for immediate response, fallback to Crouching() for full crouch state
 		bCrouching = self.Owner:KeyDown(IN_DUCK) or self.Owner:Crouching()
 	end
 
@@ -1005,14 +836,10 @@ function SWEP:GetViewModelPosition(pos, ang)
 
 	if bReloading ~= self.bWasReloading then
 		if bReloading then
-			-- Reload started - hide crosshair
 			self.DrawCrosshair = false
 		elseif not bReloading then
-			-- Reload finished - restore crosshair based on current state
-			-- Check if weapon is in SAFE mode - crosshair should stay hidden
 			if self:GetIsOnSafe() then
 				self.DrawCrosshair = false
-			-- Check if player is ACTUALLY sprinting (SPEED key held and on ground)
 			elseif self.Owner:KeyDown(IN_SPEED) and self.Owner:IsOnGround() then
 				self.fSprintTime = CurTime()
 				self.bLastSprint = true
@@ -1030,22 +857,18 @@ function SWEP:GetViewModelPosition(pos, ang)
 		self.bWasReloading = bReloading
 	end
 
-	-- Ensure progress values exist (they are updated by UpdateProgressRatios in Think)
-	-- DO NOT reset these values - they persist across frames and menu opens/closes
 	if not self.IronSightsProgress then self.IronSightsProgress = 0 end
 	if not self.SprintProgress then self.SprintProgress = 0 end
 	if not self.SafetyProgress then self.SafetyProgress = 0 end
 	if not self.CrouchProgress then self.CrouchProgress = 0 end
 
-	-- Get safety state for later use
 	local bSafe = self:GetIsOnSafe()
 
-	-- Handle crosshair visibility based on state changes
 	local wasInADS = self.bLastIron or false
 	local wasInSprint = self.bLastSprint or false
 	local wasInSafety = self.bLastSafety or false
 
-	-- Track state changes for crosshair management
+	-- Crosshair visibility
 	if bIron and not wasInADS then
 		if not self.ShowCrosshairInADS then
 			self.DrawCrosshair = false
@@ -1078,74 +901,59 @@ function SWEP:GetViewModelPosition(pos, ang)
 		end
 	end
 
-	-- Calculate final multiplier using highest priority state
-	-- Safety > Sprint > ADS (matches TFA's priority system)
+	-- Priority: Safety > Sprint > ADS
 	local Mul = math.max(self.SafetyProgress, self.SprintProgress, self.IronSightsProgress)
 
-	-- Enhanced animations
 	if IsValid(self.Owner) and self.Owner:IsPlayer() then
-		-- Ensure variables are initialized
 		self.BreathIntensity = self.BreathIntensity or 0
 		self.WalkIntensity = self.WalkIntensity or 0
 		self.SprintIntensity = self.SprintIntensity or 0
 		self.JumpVelocitySmooth = self.JumpVelocitySmooth or 0
 		self.LateralVelocitySmooth = self.LateralVelocitySmooth or 0
-		self.JumpIntensitySmooth = self.JumpIntensitySmooth or 0  -- Smooth jump transition intensity
+		self.JumpIntensitySmooth = self.JumpIntensitySmooth or 0
 		self.LastEyeAngles = self.LastEyeAngles or self.Owner:EyeAngles()
 		self.CameraRotationVelocity = self.CameraRotationVelocity or 0
 
-		-- Detect fire mode changes (networked from SERVER)
+		-- Fire mode change detection
 		local currentNetworkedMode = self.Weapon:GetNWInt("CurrentFireMode", 1)
 		self.LastNetworkedFireMode = self.LastNetworkedFireMode or currentNetworkedMode
 		if currentNetworkedMode ~= self.LastNetworkedFireMode then
-			-- Fire mode changed - trigger animation only for normal fire mode switches
-			-- Skip animation when toggling safety on/off (within 0.5s of safety toggle)
+			-- Skip animation when toggling safety (within 0.5s of safety toggle)
 			local recentSafetyToggle = self.SafetyToggleTime and (CurTime() - self.SafetyToggleTime) < 0.5
 			if not recentSafetyToggle and not self:GetIsOnSafe() then
 				self.FireModeSwitchTime = CurTime()
-				-- Play fire mode switch sound on CLIENT (SERVER EmitSound may not reach owning player reliably in MP)
+				-- SERVER EmitSound may not reach owning player reliably in MP
 				self.Weapon:EmitSound("Weapon_AR2.Empty")
 			end
 			self.LastNetworkedFireMode = currentNetworkedMode
 		end
 
-		-- Check if game is paused (singleplayer)
-		-- In singleplayer, FrameTime() returns 0 when paused
 		local rawFrameTime = FrameTime()
 		local isPaused = (rawFrameTime == 0)
-
-		local ft = isPaused and 0.001 or math.Clamp(rawFrameTime, 0.001, 0.1) -- Prevent division by zero when menu opens
+		local ft = isPaused and 0.001 or math.Clamp(rawFrameTime, 0.001, 0.1)
 		local ct = CurTime()
 
-		-- Use CurTime() directly as the animation clock
-		-- CurTime pauses automatically in SP (FrameTime = 0), and is not affected by
-		-- prediction re-runs in MP, so no accumulation or FrameNumber guards are needed
+		-- CurTime pauses in SP and is unaffected by prediction re-runs in MP
 		local animTime = CurTime()
 
-		-- Track camera rotation velocity for view turning tilt
 		local currentEyeAngles = self.Owner:EyeAngles()
 		local angleDiff = currentEyeAngles.y - self.LastEyeAngles.y
 
-		-- Handle angle wrap-around (-180 to 180)
 		if angleDiff > 180 then
 			angleDiff = angleDiff - 360
 		elseif angleDiff < -180 then
 			angleDiff = angleDiff + 360
 		end
 
-		-- Calculate angular velocity (degrees per second)
-		-- Guard against division by zero (backup safety if ft somehow = 0)
 		local angularVelocity = ft > 0 and (angleDiff / ft) or 0
 		self.CameraRotationVelocity = Lerp(ft * 5, self.CameraRotationVelocity, angularVelocity)
 		self.LastEyeAngles = currentEyeAngles
 
-		-- Get player movement states
 		local velocity = self.Owner:GetVelocity()
 		local speed = velocity:Length2D()
 		local isOnGround = self.Owner:IsOnGround()
 		local isJumping = not isOnGround and math.abs(velocity.z) > 10
 
-		-- Check if player is pressing movement keys (for immediate sprint exit when keys released)
 		local isPressingMovement = self.Owner:KeyDown(IN_FORWARD) or self.Owner:KeyDown(IN_BACK) or self.Owner:KeyDown(IN_MOVELEFT) or self.Owner:KeyDown(IN_MOVERIGHT)
 
 		local isActuallySprinting = self.Owner:KeyDown(IN_SPEED) and speed > 50 and isOnGround and isPressingMovement
@@ -1155,7 +963,6 @@ function SWEP:GetViewModelPosition(pos, ang)
 
 		local isReloading = self.Weapon:GetNWBool("Reloading")
 
-		-- During reload: treat sprint as walk (idle positioning with walking bob/tilt, not sprint bob)
 		local isSprinting = isActuallySprinting and not isReloading
 		local isWalking = speed > 20 and (not isSprinting or isReloading) and isOnGround
 		local isShooting = self.Weapon:GetNextPrimaryFire() > ct - 0.15
@@ -1165,7 +972,6 @@ function SWEP:GetViewModelPosition(pos, ang)
 		local targetWalk = isWalking and math.Clamp(speed / 200, 0, 1) or 0
 		local targetSprint = isSprinting and math.Clamp(speed / 250, 0, 1) or 0
 
-		-- Very smooth transitions to prevent jittering
 		local breathSpeed = ft * 2
 		local walkSpeed = ft * 6
 		local sprintSpeed = ft * 4
@@ -1174,11 +980,9 @@ function SWEP:GetViewModelPosition(pos, ang)
 		self.WalkIntensity = Lerp(walkSpeed, self.WalkIntensity, targetWalk)
 		self.SprintIntensity = Lerp(sprintSpeed, self.SprintIntensity, targetSprint)
 
-		-- TFA-style jump velocity smoothing
 		local zVelocity = velocity.z
 		self.JumpVelocitySmooth = Lerp(ft * 7, self.JumpVelocitySmooth or 0, zVelocity)
 
-		-- Track lateral velocity for tilt animation
 		local eyeAng = self.Owner:EyeAngles()
 		local rightVec = eyeAng:Right()
 		rightVec.z = 0
@@ -1186,24 +990,19 @@ function SWEP:GetViewModelPosition(pos, ang)
 		local lateralVel = velocity:Dot(rightVec)
 		self.LateralVelocitySmooth = Lerp(ft * 3, self.LateralVelocitySmooth, lateralVel)
 
-		-- Get local axes
 		local up = ang:Up()
 		local right = ang:Right()
 		local forward = ang:Forward()
 		local flip = self.ViewModelFlip and -1 or 1
 
-		-- Reduce animation intensity when aiming
 		local aimMult = 1 - self.IronSightsProgress * 0.85
 
 		if self.BreathIntensity > 0.01 then
 			local breatheMult = self.BreathIntensity * aimMult
 			local breatheTime = animTime * 1.5
 
-			-- Subtle breathing motion
 			pos:Add(right * math.sin(breatheTime) * breatheMult * flip * 0.1)
 			pos:Add(up * math.cos(breatheTime * 0.5) * breatheMult * 0.06)
-
-			-- Minimal rotation
 			ang:RotateAroundAxis(forward, math.sin(breatheTime) * breatheMult * flip * 0.5)
 		end
 
@@ -1211,11 +1010,8 @@ function SWEP:GetViewModelPosition(pos, ang)
 			local walkMult = self.WalkIntensity * aimMult
 			local walkTime = animTime * 8
 
-			-- Natural walking bob (reduced vertical bob by 3/4)
 			pos:Add(up * math.abs(math.sin(walkTime * 2)) * walkMult * 0.05)
 			pos:Add(right * math.sin(walkTime) * walkMult * flip * 0.25)
-
-			-- Subtle walk sway
 			ang:RotateAroundAxis(right, -math.sin(walkTime * 2) * walkMult * 1.2)
 			ang:RotateAroundAxis(forward, math.sin(walkTime) * walkMult * flip * 1.5)
 		end
@@ -1224,133 +1020,87 @@ function SWEP:GetViewModelPosition(pos, ang)
 			local sprintMult = self.SprintIntensity
 			local sprintTime = animTime * 9
 
-			-- Sprint bob (reduced vertical by 3/4, faster than walk)
 			pos:Add(up * math.abs(math.sin(sprintTime * 2)) * sprintMult * 0.1)
 			pos:Add(right * math.sin(sprintTime) * sprintMult * flip * 0.3)
-
-			-- Sprint sway (less aggressive)
 			ang:RotateAroundAxis(right, -math.sin(sprintTime * 2) * sprintMult * 2)
 			ang:RotateAroundAxis(forward, math.sin(sprintTime) * sprintMult * flip * 1.8)
 		end
 
-		-- Clamp velocity to -1 to 1 range and convert to trigonometric angle
 		local trigX = -math.Clamp(self.JumpVelocitySmooth / 200, -1, 1) * math.pi / 2
 
-		-- Calculate raw jump intensity (reduced during ADS to minimize vertical movement)
-		-- When fully in ADS (IronSightsProgress=1), intensity is reduced to 15% (1 - 0.85 = 0.15)
 		local rawJumpIntensity = (3 + math.Clamp(math.abs(self.JumpVelocitySmooth) - 100, 0, 200) / 200 * 4) * (1 - self.IronSightsProgress * 0.85)
 
-		-- Smoothly lerp jump intensity for smooth transitions (handles repeated jumping)
-		-- Speed at ft*5 provides smooth initial rise without snappiness
 		local jumpIntensityTarget = isJumping and rawJumpIntensity or 0
 		self.JumpIntensitySmooth = Lerp(ft * 5, self.JumpIntensitySmooth, jumpIntensityTarget)
-
-		-- Use smoothed intensity for final application
 		local jumpIntensity = self.JumpIntensitySmooth
 
-		-- Reduce jump intensity when ADS on scoped weapons (minor movement, but still noticeable)
-		-- Normal weapons and non-ADS scoped weapons get full jump intensity
 		local isScopedWeapon = self.Base == "carby_scoped_base"
 		local scopedADSReduction = (isScopedWeapon and bIron) and 0.4 or 1.0
 		jumpIntensity = jumpIntensity * scopedADSReduction
 
-		-- TFA scale constant
 		local scale_r = -6
-
-		-- Calculate sine value for direction
 		local sinValue = math.sin(trigX)
 
-		-- When falling DOWN: trigX is positive, sinValue is positive -> gun moves inward/up
-		-- Reduce inward movement by 65% (keep 35%) to prevent excessive movement towards center screen
 		local isFalling = sinValue > 0
-		local fallReduction = isFalling and 0.35 or 1.0  -- 35% of normal when falling, 100% when jumping
-
-		-- Minimal jump movement when ADS (20% of normal jump for all components)
+		local fallReduction = isFalling and 0.35 or 1.0
 		local adsJumpReduction = (self.IronSightsProgress > 0.1) and 0.20 or 1.0
 
-		-- Apply sine-based movement for smooth arc motion
-		-- When jumping UP: Full movement (trigX negative, sinValue negative, fallReduction = 1.0)
-		-- When falling DOWN: 35% movement (trigX positive, sinValue positive, fallReduction = 0.35)
-		-- All jump components reduced to 20% when ADS for minimal movement
 		pos:Add(right * sinValue * scale_r * 0.1 * jumpIntensity * flip * 0.4 * adsJumpReduction * fallReduction)
 		pos:Add(-up * sinValue * scale_r * 0.1 * jumpIntensity * 0.4 * adsJumpReduction * fallReduction)
 		ang:RotateAroundAxis(forward, sinValue * scale_r * jumpIntensity * flip * 0.4 * adsJumpReduction)
 
 		local xVelocityClamped = self.LateralVelocitySmooth
 
-		-- TFA's square root scaling for high velocities
+		-- Square root scaling for high velocities
 		if math.abs(xVelocityClamped) > 200 then
 			local sign = (xVelocityClamped < 0) and -1 or 1
 			xVelocityClamped = (math.sqrt((math.abs(xVelocityClamped) - 200) / 50) * 50 + 200) * sign
 		end
 
-		-- ADS tilt reduction: 70% reduction when fully in ADS (allows more tilt while maintaining sight alignment)
 		local adsTiltReduction = self.IronSightsProgress > 0.1 and (1 - self.IronSightsProgress * 0.70) or 1.0
 		local sprintTiltAmplification = 1.0
 
-		-- Check if we're in the post-reload transition period (waiting to enter sprint)
 		local postReloadTransitionEnd = self.Weapon:GetNWFloat("PostReloadTransition", 0)
 		local inPostReloadTransition = CurTime() < postReloadTransitionEnd
 
-		-- Amplify tilt during sprint (but NOT during reload - use walking tilt instead)
-		-- During reload: walking lateral tilt (sprintTiltAmplification = 1.0)
-		-- Reduced amplification from 2.0 to 0.5 to prevent excessive tilt
 		if not inPostReloadTransition and self.SprintIntensity > 0.1 and bSprint and not bReloading then
 			sprintTiltAmplification = 1 + self.SprintIntensity * 0.5
 		end
 		local baseTiltAmount = xVelocityClamped * 0.04 * flip * adsTiltReduction * sprintTiltAmplification
 
-		-- Add camera rotation tilt (when turning view while idle or ADS)
-		-- Camera turning right (positive angular velocity) = tilt right (positive angle)
-		-- Scale based on state: less in ADS to avoid misaligning iron sights
-		-- Reduced by 15% from original 0.015 to 0.01275
-		local cameraTiltScale = adsTiltReduction * 0.01275  -- Reduced intensity, scaled in ADS
+		local cameraTiltScale = adsTiltReduction * 0.01275
 		local cameraTilt = self.CameraRotationVelocity * cameraTiltScale * flip
 
-		-- Combine lateral movement tilt and camera rotation tilt
 		local totalTilt = baseTiltAmount + cameraTilt
-
-		-- Apply tilt rotation
 		ang:RotateAroundAxis(forward, totalTilt)
 
 		-- Fire mode switch animation
-		-- 1) Gun moves slightly back
-		-- 2) At the same time, gun moves slightly up and slightly on a right angle
-		-- 3) Gun returns to default idle position
-		-- All movements happen together smoothly
 		if self.FireModeSwitchTime then
 			local switchElapsed = ct - self.FireModeSwitchTime
-			local totalDuration = 0.4  -- Smooth, not rushed
+			local totalDuration = 0.4
 
 			if switchElapsed < totalDuration then
 				local t = switchElapsed / totalDuration
 
-				-- Smooth sine curve: 0 -> 1 -> 0 over the duration
 				local intensity = math.sin(t * math.pi)
 
-				-- All movements happen simultaneously:
-				pos:Add(forward * intensity * -0.45)  -- Slightly back
-				pos:Add(up * intensity * 0.12)  -- Slightly up
-				ang:RotateAroundAxis(forward, intensity * 1.5 * flip)  -- Slight right angle (roll)
+				pos:Add(forward * intensity * -0.45)
+				pos:Add(up * intensity * 0.12)
+				ang:RotateAroundAxis(forward, intensity * 1.5 * flip)
 			else
-				-- Animation complete
 				self.FireModeSwitchTime = nil
 			end
 		end
 	end
 
-	-- Early return if no active states and no crouch (all progress values at 0)
 	if Mul == 0 and self.CrouchProgress <= 0.001 then
 		return pos, ang
 	end
 
-	-- TFA-Style Position Calculation: Sequential LerpVector from base position
-	-- Start with base idle position (Vector 0,0,0)
 	local targetPos = Vector(0, 0, 0)
 	local targetAng = Vector(0, 0, 0)
 
-	-- Apply sprint/safety positioning (they use the same position)
-	-- SprintProgress handles smooth transitions automatically - no special reload logic needed
+	-- Sprint/safety positioning (shared position)
 	if self.SprintProgress > 0.01 or self.SafetyProgress > 0.01 then
 		local sprintSafetyProgress = math.max(self.SprintProgress, self.SafetyProgress)
 		local sprintPos = self.RunSightsPos or Vector(0, 0, 0)
@@ -1360,13 +1110,11 @@ function SWEP:GetViewModelPosition(pos, ang)
 		targetAng = LerpVector(sprintSafetyProgress, targetAng, sprintAng)
 	end
 
-	-- Apply ADS positioning (overwrites sprint if active, following TFA's priority)
+	-- ADS positioning
 	if self.IronSightsProgress > 0.02 then
 		local adsPos = self.SightsPos or Vector(0, 0, 0)
 		local adsAng = self.SightsAng or Vector(0, 0, 0)
 
-		-- Special handling for scoped weapons: push gun down and back slightly
-		-- Muzzle flash effects are spawned at a distinct position below the scope (handled in FireBurstShot)
 		if self.Scoped then
 			adsPos = Vector(adsPos.x, adsPos.y - 3, adsPos.z - 2)
 		end
@@ -1375,7 +1123,6 @@ function SWEP:GetViewModelPosition(pos, ang)
 		targetAng = LerpVector(self.IronSightsProgress, targetAng, adsAng)
 	end
 
-	-- Apply final position/angle offsets
 	if targetAng then
 		ang = ang * 1
 		ang:RotateAroundAxis(ang:Right(), targetAng.x)
@@ -1391,19 +1138,16 @@ function SWEP:GetViewModelPosition(pos, ang)
 	pos = pos + targetPos.y * Forward
 	pos = pos + targetPos.z * Up
 
-	-- Apply crouch positioning offset with smooth ADS transition
+	-- Crouch positioning
 	if self.CrouchPos and self.CrouchAng and self.CrouchProgress > 0.001 then
-		-- Additional safety checks for weapon state transitions
 		if not IsValid(self) or not IsValid(self.Weapon) then
 			return pos, ang
 		end
 
-		-- Ensure owner is still valid (weapon switching can invalidate this)
 		if not IsValid(self.Owner) or not self.Owner:IsPlayer() then
 			return pos, ang
 		end
 
-		-- Ensure all required variables exist to prevent crashes
 		if not self.CrouchPos.x or not self.CrouchPos.y or not self.CrouchPos.z then
 			return pos, ang
 		end
@@ -1417,18 +1161,14 @@ function SWEP:GetViewModelPosition(pos, ang)
 		local offset = Vector(self.CrouchPos.x, self.CrouchPos.y, self.CrouchPos.z)
 		local angleOffset = Angle(self.CrouchAng.x, self.CrouchAng.y, self.CrouchAng.z)
 
-		-- Apply crouch progress for smooth transitions
 		offset = offset * self.CrouchProgress
 		angleOffset = angleOffset * self.CrouchProgress
 
-		-- Smoothly fade out crouch positioning when transitioning to ADS
-		-- IronSightsProgress = 0 (not in ADS) -> full crouch offset
-		-- IronSightsProgress = 1 (fully in ADS) -> no crouch offset
+		-- Fade out crouch offset when entering ADS
 		local adsFadeMultiplier = 1 - self.IronSightsProgress
 		offset = offset * adsFadeMultiplier
 		angleOffset = angleOffset * adsFadeMultiplier
 
-		-- Safely transform the offset by the view angle
 		if ang and ang.Right and ang.Forward and ang.Up then
 			local rightVec = ang:Right()
 			local forwardVec = ang:Forward()
@@ -1444,9 +1184,6 @@ function SWEP:GetViewModelPosition(pos, ang)
 	return pos, ang
 end
 
--- ============================================================================
--- DrawWorldModel - World model rendering with bone-relative offset positioning
--- ============================================================================
 
 function SWEP:DrawWorldModel()
 	local pl = self:GetOwner()
@@ -1456,21 +1193,16 @@ function SWEP:DrawWorldModel()
 		if boneIndex then
 			local pos, ang = pl:GetBonePosition(boneIndex)
 
-			-- Apply positional offset
 			pos = pos + ang:Forward() * self.Offset.Pos.Forward +
 						ang:Right() * self.Offset.Pos.Right +
 						ang:Up() * self.Offset.Pos.Up
 
-			-- Apply rotational offset
 			ang:RotateAroundAxis(ang:Up(), self.Offset.Ang.Up)
 			ang:RotateAroundAxis(ang:Right(), self.Offset.Ang.Right)
 			ang:RotateAroundAxis(ang:Forward(), self.Offset.Ang.Forward)
 
-			-- Cache scale-corrected attachment positions for muzzle flash effects
-			-- When Scale != 1, EnableMatrix("RenderMultiply") scales the visual model
-			-- around the render origin (pos). GetAttachment returns unscaled bonemerge
-			-- positions, so we scale the vector from render origin to attachment to
-			-- match where the muzzle visually appears on the scaled model.
+			-- GetAttachment returns unscaled positions, so correct them to match
+			-- the visually scaled model when Scale != 1
 			local wmScale = self.Offset.Scale or 1
 			if wmScale ~= 1 then
 				self.WMCorrectedAttachments = {}
@@ -1485,7 +1217,7 @@ function SWEP:DrawWorldModel()
 				self.WMCorrectedAttachments = nil
 			end
 
-			-- For models with $bonemerge, temporarily disable it so SetRenderOrigin works
+			-- Temporarily disable $bonemerge so SetRenderOrigin works
 			local wasBoneMerged = self:IsEffectActive(EF_BONEMERGE)
 			if wasBoneMerged then
 				self:RemoveEffects(EF_BONEMERGE)
@@ -1494,7 +1226,6 @@ function SWEP:DrawWorldModel()
 			self:SetRenderOrigin(pos)
 			self:SetRenderAngles(ang)
 
-			-- Apply scale if specified
 			local scale = self.Offset.Scale or 1
 			if scale ~= 1 then
 				local matrix = Matrix()
@@ -1502,13 +1233,11 @@ function SWEP:DrawWorldModel()
 				self:EnableMatrix("RenderMultiply", matrix)
 			end
 
-			-- Apply WorldModelBoneMods if they exist
 			local appliedBones = {}
 			if self.WorldModelBoneMods then
 				for boneName, boneData in pairs(self.WorldModelBoneMods) do
 					local boneIdx = self:LookupBone(boneName)
 					if boneIdx then
-						-- Apply bone manipulations
 						if boneData.scale then
 							self:ManipulateBoneScale(boneIdx, boneData.scale)
 						end
@@ -1518,7 +1247,6 @@ function SWEP:DrawWorldModel()
 						if boneData.angle then
 							self:ManipulateBoneAngles(boneIdx, boneData.angle)
 						end
-						-- Track which bones were modified for cleanup
 						appliedBones[boneIdx] = true
 					end
 				end
@@ -1526,35 +1254,29 @@ function SWEP:DrawWorldModel()
 
 			self:DrawModel()
 
-			-- Reset WorldModelBoneMods
 			for boneIdx, _ in pairs(appliedBones) do
 				self:ManipulateBoneScale(boneIdx, Vector(1, 1, 1))
 				self:ManipulateBonePosition(boneIdx, Vector(0, 0, 0))
 				self:ManipulateBoneAngles(boneIdx, Angle(0, 0, 0))
 			end
 
-			-- Reset scale
 			if scale ~= 1 then
 				self:DisableMatrix("RenderMultiply")
 			end
 
-			-- Re-enable bonemerge if it was active before
 			if wasBoneMerged then
 				self:AddEffects(EF_BONEMERGE)
 			end
 		end
 	else
-		-- Weapon is dropped - render at default position
 		self:SetRenderOrigin(nil)
 		self:SetRenderAngles(nil)
 
-		-- Apply WorldModelBoneMods if they exist
 		local appliedBones = {}
 		if self.WorldModelBoneMods then
 			for boneName, boneData in pairs(self.WorldModelBoneMods) do
 				local boneIdx = self:LookupBone(boneName)
 				if boneIdx then
-					-- Apply bone manipulations
 					if boneData.scale then
 						self:ManipulateBoneScale(boneIdx, boneData.scale)
 					end
@@ -1564,7 +1286,6 @@ function SWEP:DrawWorldModel()
 					if boneData.angle then
 						self:ManipulateBoneAngles(boneIdx, boneData.angle)
 					end
-					-- Track which bones were modified for cleanup
 					appliedBones[boneIdx] = true
 				end
 			end
@@ -1572,7 +1293,6 @@ function SWEP:DrawWorldModel()
 
 		self:DrawModel()
 
-		-- Reset WorldModelBoneMods
 		for boneIdx, _ in pairs(appliedBones) do
 			self:ManipulateBoneScale(boneIdx, Vector(1, 1, 1))
 			self:ManipulateBonePosition(boneIdx, Vector(0, 0, 0))
@@ -1581,12 +1301,6 @@ function SWEP:DrawWorldModel()
 	end
 end
 
--- ============================================================================
--- HUD Functions
--- ============================================================================
-
--- Hide default GMod HUD elements when using M9K:R HUD
--- This prevents the default ammo/health HUD from showing
 local M9KR_HudHide = {
 	CHudAmmo = true,
 	CHudSecondaryAmmo = true,
@@ -1594,21 +1308,14 @@ local M9KR_HudHide = {
 }
 
 function SWEP:HUDShouldDraw(name)
-	-- Only hide if M9K:R HUD is enabled
 	if M9KR_HudHide[name] and GetConVar("m9kr_hud_mode"):GetInt() == 1 then
 		return false
 	end
 end
 
--- Suppress default GMod ammo HUD when using default HUD mode
--- The clip count already includes the chambered round from tactical reload
 function SWEP:DrawAmmo()
 	return true
 end
-
--- ============================================================================
--- Utility
--- ============================================================================
 
 -- Fully copies the table, meaning all tables inside this table are copied too and so on (normal table.Copy copies only their reference).
 -- Does not copy entities of course, only copies their reference.

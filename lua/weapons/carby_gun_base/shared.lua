@@ -1,19 +1,6 @@
--- Variables that are used on both client and server
-
--- Precache arrow impact model
 util.PrecacheModel("models/viper/mw/attachments/crossbow/attachment_vm_sn_crossbow_mag.mdl")
 
--- Base weapon class (required for GMod weapon system)
 SWEP.Base = "weapon_base"
-
--- Animation sequence name mappings for viewmodel activities
--- These map GMod activity constants to the sequence names used in weapon models
--- ACT_VM_DRAW_DEPLOY -> "draw_first" - First time drawing the weapon
--- ACT_VM_RELOAD -> "reload" - Standard reload animation
--- ACT_VM_RELOAD_EMPTY -> "reload_empty" - Reload from empty animation
--- ACT_VM_PRIMARYATTACK_1 -> "fire_ads" - ADS (aimed down sights) fire animation
--- ACT_VM_PRIMARYATTACK_2 -> "fire_suppressed_ads" - Suppressed ADS fire animation
--- ACT_VM_IDLE -> "idle" - Idle animation
 
 SWEP.Category = ""
 SWEP.Gun = ""
@@ -21,59 +8,45 @@ SWEP.Author = "Generic Default, Worshipper, Clavus, and Bob"
 SWEP.Contact = ""
 SWEP.Purpose = ""
 SWEP.Instructions = ""
-SWEP.MuzzleAttachment = "1" -- Should be "1" for CSS models or "muzzle" for hl2 models
-SWEP.WMCorrectedMuzzle = false -- Set true on MW-ported weapons where bonemerge positioning doesn't match the Offset render
-SWEP.MuzzleFlashEffect = "m9kr_muzzleflash_rifle" -- Muzzle flash effect when unsuppressed
-SWEP.MuzzleFlashEffectSilenced = nil -- Muzzle flash effect when suppressed (optional, set per weapon)
+SWEP.MuzzleAttachment = "1"
+SWEP.WMCorrectedMuzzle = false
+SWEP.MuzzleFlashEffect = "m9kr_muzzleflash_rifle"
+SWEP.MuzzleFlashEffectSilenced = nil
 SWEP.DrawCrosshair = true
-SWEP.ShowCrosshairInADS = false -- If true, crosshair stays visible during ADS (for weapons without perfect iron sights)
-SWEP.ViewModelFOV = 65 -- How big the gun will look
-SWEP.ViewModelFlip = true -- True for CSS models, False for HL2 models
-SWEP.WorldModel = "" -- World model path
-SWEP.WorldModelSilenced = nil -- World model path when suppressed (optional, for weapons with CanBeSilenced)
+SWEP.ShowCrosshairInADS = false
+SWEP.ViewModelFOV = 65
+SWEP.ViewModelFlip = true
+SWEP.WorldModel = ""
+SWEP.WorldModelSilenced = nil
 
 SWEP.Spawnable = false
 SWEP.AdminSpawnable = false
 
-SWEP.Primary.Sound = Sound("") -- Sound of the gun
-SWEP.Primary.Round = "" -- What kind of bullet?
-SWEP.Primary.Cone = 0.2 -- Accuracy of NPCs
+SWEP.Primary.Sound = Sound("")
+SWEP.Primary.Round = ""
+SWEP.Primary.Cone = 0.2
 SWEP.Primary.Recoil = 10
 SWEP.Primary.Damage = 10
 SWEP.Primary.NumShots = 1
-SWEP.Primary.RPM = 0 -- This is in Rounds Per Minute
-SWEP.Primary.ClipSize = 0 -- Size of a clip
-SWEP.Primary.DefaultClip = 0 -- Default number of bullets in a clip
-SWEP.Primary.KickUp = 0 -- Maximum up recoil (rise)
-SWEP.Primary.KickDown = 0 -- Maximum down recoil (skeet)
-SWEP.Primary.KickHorizontal = 0 -- Maximum side recoil (koolaid)
+SWEP.Primary.RPM = 0
+SWEP.Primary.ClipSize = 0
+SWEP.Primary.DefaultClip = 0
+SWEP.Primary.KickUp = 0
+SWEP.Primary.KickDown = 0
+SWEP.Primary.KickHorizontal = 0
 SWEP.Primary.Ammo = "none"
 
 SWEP.EmptySoundPlayed = false
 SWEP.CanReload = true
 
--- Chamber mechanics for +1 tactical reload system
-SWEP.HasChamber = true -- Enable chamber mechanics (set to false to disable)
-SWEP.ChamberRound = false -- Is there currently a round chambered?
+SWEP.HasChamber = true
+SWEP.ChamberRound = false
 
--- High-RPM weapon optimization (for weapons like minigun at 2500+ RPM)
-SWEP.DisableBulletImpacts = false -- Disable per-bullet impact effects (prevents view lock at high fire rates)
-SWEP.SoundIndicatorInterval = nil -- Play fire sound every N shots instead of every shot (nil = every shot)
-
--- Action sounds to stop on holster (draw, reload, bolt sounds, etc. - NOT fire sounds)
--- Example: SWEP.ActionSounds = {"M9KR_MA5C.Draw", "M9KR_MA5C.Reload", "M9KR_MA5C.Reload_Empty"}
+SWEP.DisableBulletImpacts = false
+SWEP.SoundIndicatorInterval = nil
 SWEP.ActionSounds = {}
 
--- Fire mode system with dynamic spread modifiers
--- Spread values (hip fire only, ADS always 0):
---   auto: 0.0125 (default hip fire)
---   burst: 0.003 (tighter hip fire)
---   semi: 0.0001 (very tight hip fire)
---   bolt: 0.001 (bolt-action precision)
--- SWEP.FireModes is NOT defined here — each weapon MUST define its own FireModes table.
--- If a weapon doesn't define FireModes, it defaults to automatic fire with no mode switching.
--- Example: SWEP.FireModes = {"auto", "semi"} or SWEP.FireModes = {"bolt"}
-SWEP.CurrentFireMode = 1 -- Index into FireModes table
+SWEP.CurrentFireMode = 1
 SWEP.FireModeNames = {
 	-- standard fire modes
 	safe = "SAFETY", -- new mode - Use Key + Attack to toggle
@@ -90,10 +63,9 @@ SWEP.FireModeNames = {
 	break_action = "BREAK-ACTION"
 }
 
--- Burst fire configuration
-SWEP.BurstDelay = 0.05 -- Delay between each shot within a burst (e.g., shot 1 -> shot 2 -> shot 3)
-SWEP.BurstCount = 3 -- Number of shots per burst
-SWEP.BurstTriggerPull = 0.35 -- Time in seconds before next trigger pull after burst completes
+SWEP.BurstDelay = 0.05
+SWEP.BurstCount = 3
+SWEP.BurstTriggerPull = 0.35
  
 SWEP.Secondary.ClipSize = ""
 SWEP.Secondary.Ammo = ""
@@ -110,19 +82,16 @@ SWEP.HasGL = false
 SWEP.Silenced = false
 SWEP.NextSilence = 0
 SWEP.NextFireSelect = 0
-SWEP.NextSafetyToggle = 0 -- Cooldown for safety toggle
+SWEP.NextSafetyToggle = 0
 SWEP.OrigCrossHair = true
-SWEP.JumpCancelsSprint = true -- If true, jumping while sprinting cancels sprint and allows shooting
-SWEP.Safety = false -- Weapon safety (default OFF, toggle with USE + ATTACK)
-SWEP.ReloadSpeedModifier = 1.0 -- Reload animation speed multiplier (1.0 = normal speed, 2.0 = 2x speed)
+SWEP.JumpCancelsSprint = true
+SWEP.Safety = false
+SWEP.ReloadSpeedModifier = 1.0
 
 SWEP.CrouchPos = Vector(0, 1.5, -0.3)
 SWEP.CrouchAng = Vector(0, 0, -7)
 
--- Low ammo sound system (TFA-style)
-SWEP.LowAmmoSoundThreshold = 0.33 -- Play low ammo sound when below 33% of clip
-
--- Client-only animation variables, low ammo, ADS/sprint/FOV state are in cl_init.lua
+SWEP.LowAmmoSoundThreshold = 0.33
  
 local PainMulti = 1
  
@@ -170,145 +139,77 @@ end
 SWEP.IronSightsPos = Vector (2.4537, 1.0923, 0.2696)
 SWEP.IronSightsAng = Vector (0.0186, -0.0547, 0)
 
--- These multipliers reduce recoil when aiming down sights
--- Runtime scaling means we only need ONE fire animation, not separate hip/ADS versions
--- 
--- PHILOSOPHY: When ADS, weapons should have MINIMAL horizontal jump
--- This creates stable, controllable ADS that feels professional and tactical
-SWEP.ViewModelPunchPitchMultiplier = 0.5  -- Hip-fire vertical viewmodel recoil
-SWEP.ViewModelPunchYawMultiplier = 0.5  -- Hip-fire horizontal viewmodel recoil
-SWEP.ViewModelPunch_VerticalMultiplier = 0.3  -- Hip-fire backward push
-SWEP.ViewModelPunch_MaxVerticalOffset = 3  -- Maximum backward offset in units
+SWEP.ViewModelPunchPitchMultiplier = 0.5
+SWEP.ViewModelPunchYawMultiplier = 0.5
+SWEP.ViewModelPunch_VerticalMultiplier = 0.3
+SWEP.ViewModelPunch_MaxVerticalOffset = 3
 
--- Internal recoil tracking (don't modify these)
-SWEP.ViewPunchP = 0  -- Vertical recoil accumulator
-SWEP.ViewPunchY = 0  -- Horizontal recoil accumulator
-SWEP.IronSightsProgress = 0  -- 0.0 = hip, 1.0 = fully ADS
+SWEP.ViewPunchP = 0
+SWEP.ViewPunchY = 0
+SWEP.IronSightsProgress = 0
 
--- World model offset for proper positioning (prevents "crotch gun" issue)
--- Maps to bone-relative coordinates (Forward/Right/Up and rotations)
--- When using SWEP Construction Kit to position weapons:
---   SCK Position X → Offset.Pos.Up
---   SCK Position Y → Offset.Pos.Right
---   SCK Position Z → Offset.Pos.Forward
---   SCK Angle Pitch → Offset.Ang.Up
---   SCK Angle Yaw → Offset.Ang.Right
---   SCK Angle Roll → Offset.Ang.Forward
 SWEP.Offset = {
 	Pos = {
-		Up = 0,      -- Vertical position (SCK Position X)
-		Right = 0,   -- Horizontal position left/right (SCK Position Y)
-		Forward = 0  -- Depth position forward/back (SCK Position Z)
+		Up = 0,
+		Right = 0,
+		Forward = 0
 	},
 	Ang = {
-		Up = 0,      -- Rotation around vertical axis / yaw (SCK Angle Pitch)
-		Right = 0,   -- Rotation around horizontal axis / pitch (SCK Angle Yaw)
-		Forward = 0  -- Rotation around depth axis / roll (SCK Angle Roll)
+		Up = 0,
+		Right = 0,
+		Forward = 0
 	},
-	Scale = 1        -- World model scale (default 1.0)
+	Scale = 1
 }
 
---[[
-	Network variables for client-server synchronization
-	Allows suppressor state to be visible to all players
-]]--
 function SWEP:SetupDataTables()
-	-- Network suppressor state so other players can see the suppressor attachment
 	self:NetworkVar("Bool", 0, "IsSuppressed")
-
-	-- Network suppressor attachment/detachment animation state
-	self:NetworkVar("Bool", 1, "IsAttachingSuppressor")  -- TRUE while ATTACH animation is playing
-	self:NetworkVar("Bool", 2, "IsDetachingSuppressor")  -- TRUE while DETACH animation is playing
-	self:NetworkVar("Float", 0, "SuppressorAnimEndTime") -- Time when animation finishes
-
-	-- Network safety state so other players can see the weapon is on safe
-	self:NetworkVar("Bool", 3, "IsOnSafe") -- TRUE when weapon safety is engaged
-
-	-- Shot counter for MP third-person muzzle flash synchronization
-	-- SERVER increments on each shot; non-owning clients detect changes in Think
+	self:NetworkVar("Bool", 1, "IsAttachingSuppressor")
+	self:NetworkVar("Bool", 2, "IsDetachingSuppressor")
+	self:NetworkVar("Float", 0, "SuppressorAnimEndTime")
+	self:NetworkVar("Bool", 3, "IsOnSafe")
 	self:NetworkVar("Int", 0, "M9KRShotsFired")
-
-	-- Networked hold type for MP third-person player model animations
-	-- SetHoldType is realm-local, so we network the string for all clients to apply
 	self:NetworkVar("String", 0, "M9KRHoldType")
 end
 
---[[
-	Update world model based on suppressor state
-	Switches between regular and suppressed world models dynamically
-
-	ATTACHMENT BEHAVIOR:
-	- During ATTACH animation: Suppressor is HIDDEN (not yet visible)
-	- After ATTACH completes: Suppressor becomes VISIBLE
-
-	DETACHMENT BEHAVIOR:
-	- During DETACH animation: Suppressor is STILL VISIBLE (being removed)
-	- After DETACH completes: Suppressor becomes HIDDEN
-
-	This creates realistic behavior where:
-	- You can't see a suppressor that hasn't been attached yet
-	- You CAN see a suppressor while it's being removed
-]]--
 function SWEP:UpdateWorldModel()
 	if not self.CanBeSilenced or not self.WorldModelSilenced then return end
 
-	-- Store the original world model on first call
 	if not self.WorldModelOriginal then
 		self.WorldModelOriginal = self.WorldModel
 	end
 
-	-- Determine which world model to use based on suppressor state and animation
 	local showSuppressor = false
-
 	if self:GetIsAttachingSuppressor() then
-		-- ATTACHING: Hide suppressor during animation (not yet attached)
 		showSuppressor = false
 	elseif self:GetIsDetachingSuppressor() then
-		-- DETACHING: Keep suppressor visible during animation (still attached)
 		showSuppressor = true
 	else
-		-- NOT ANIMATING: Show suppressor based on current state
 		showSuppressor = self:GetIsSuppressed()
 	end
 
-	local newModel = showSuppressor and self.WorldModelSilenced or self.WorldModelOriginal
-
-	-- Update WorldModel property (this is what the engine uses for rendering)
-	self.WorldModel = newModel
-
-	-- DO NOT call SetModel() here - it breaks viewmodel animations!
-	-- The WorldModel property change is sufficient for rendering.
-	-- The actual world model entity is only created/updated during DrawWorldModel()
+	self.WorldModel = showSuppressor and self.WorldModelSilenced or self.WorldModelOriginal
 end
 
 function SWEP:Initialize()
-	self.Reloadaftershoot = 0 -- Can't reload when firing
+	self.Reloadaftershoot = 0
 	self.OriginalHoldType = self.HoldType or "ar2"
 	self:M9KR_SetHoldType(self.HoldType)
 	self.OrigCrossHair = self.DrawCrosshair
 
-	-- Initialize chamber state
 	self.ChamberRound = false
 
-	-- Initialize sound interval counter for high-RPM weapons
 	if self.SoundIndicatorInterval then
 		self.ShotsSinceSoundPlayed = 0
 	end
 
-	-- Fix metatable inheritance issue: ensure FireModes is a clean copy
-	-- GMod's metatable inheritance can cause child weapons to see parent's FireModes
-	-- Use table.Copy to break the metatable chain completely
+	-- Break metatable chain so child weapons don't share parent's FireModes
 	if self.FireModes then
 		self.FireModes = table.Copy(self.FireModes)
 	end
 	
-	-- Initialize fire mode - set Primary.Automatic for GMod's base SWEP system
-	-- GMod's weapon system reads Primary.Automatic to determine auto-fire behavior
-	-- We set it based on the FireMode enum system for compatibility
 	if self.FireModes then
-		-- HOT-RELOAD FIX: Restore fire mode from networked variable if available
-		-- When lua_openscript reloads the weapon, the networked variable persists
-		-- but the SWEP table is recreated, so we need to restore state
+		-- Restore fire mode from NW var on hot-reload (SWEP table is recreated but NW persists)
 		local networkedMode = self.Weapon:GetNWInt("CurrentFireMode", 0)
 		if networkedMode > 0 then
 			self.CurrentFireMode = networkedMode
@@ -321,18 +222,14 @@ function SWEP:Initialize()
 			self.CurrentFireMode = 1
 		end
 
-		-- Network the initial fire mode to clients
 		if SERVER then
 			self.Weapon:SetNWInt("CurrentFireMode", self.CurrentFireMode)
 		end
 
 		local mode = self.FireModes[self.CurrentFireMode]
-		-- Only "auto" mode should have automatic fire, everything else is semi
 		self.Primary.Automatic = (mode == "auto")
 
-		-- Set hip-fire spread based on fire mode (if not already defined by weapon)
-		-- Shotguns and weapons with manually-defined spread values are excluded
-		-- Check for shotty_base OR weapons with PreserveSpreadValues flag (for magazine-fed shotguns)
+		-- Shotguns and weapons with PreserveSpreadValues keep their manually-defined spread
 		local isShotgun = self.Base == "carby_shotty_base" or self.PreserveSpreadValues
 		if not self.Primary.Spread and not isShotgun then
 			if mode == "bolt" then
@@ -340,30 +237,20 @@ function SWEP:Initialize()
 			end
 		end
 	else
-		-- No FireModes defined, default to auto
 		self.Primary.Automatic = true
 	end
 
-	-- Initialize recoil tracking
 	self.ViewPunchP = 0
 	self.ViewPunchY = 0
 
-	-- Initialize tracer shot counter
 	self.ShotCount = 0
 	self.IronSightsProgress = 0
-	self.IronSightsProgressSmooth = 0  -- Smoothed version for animations
+	self.IronSightsProgressSmooth = 0
 
-	-- Initialize suppressor state network variable
 	self:SetIsSuppressed(self.Silenced or false)
-
-	-- Initialize safety state network variable (weapon starts on safe)
 	self:SetIsOnSafe(self.Safety or false)
-
-	-- Set correct world model based on initial suppressor state
 	self:UpdateWorldModel()
 
-	-- Low ammo and ADS sounds are precached by centralized CLIENT files
-	
 	if SERVER and IsValid(self.Owner) and self.Owner:IsNPC() then
 		self:SetNPCMinBurst(3)
 		self:SetNPCMaxBurst(10)
@@ -371,12 +258,10 @@ function SWEP:Initialize()
 	end
 	
 	if CLIENT then
-		-- Create a new table for every weapon instance (if it exists)
 		if self.ViewModelBoneMods then
 			self.ViewModelBoneMods = table.FullCopy(self.ViewModelBoneMods)
 		end
 
-		-- Initialize animation variables (fast assignment, no function calls)
 		self.AnimationTime = 0
 		self.BreathIntensity = 0
 		self.WalkIntensity = 0
@@ -386,43 +271,34 @@ function SWEP:Initialize()
 		self.LateralVelocitySmooth = 0
 		self.LastGroundState = true
 
-		-- Defer expensive operations to Deploy() for faster spawn
-		-- Offset table, viewmodel setup, and texture loading happen on first deploy
 	end
 end
-
--- DrawWeaponSelection is in cl_init.lua
-
 
 function SWEP:Equip()
 	self:M9KR_SetHoldType(self.HoldType)
 end
 
 function SWEP:Deploy()
-	self:SetIronsights(false, self.Owner) -- Set the ironsight false
-	self:SetSprint(false) -- Clear sprint state initially
+	self:SetIronsights(false, self.Owner)
+	self:SetSprint(false)
 	self:M9KR_SetHoldType(self.HoldType)
 	self.BurstShotsRemaining = nil
-	self.ContinuousShotCount = 0  -- Reset progressive spread counter (auto mode)
-	self.RapidFireHeat = 0  -- Reset rapid fire heat (semi/burst spam)
+	self.ContinuousShotCount = 0
+	self.RapidFireHeat = 0
 	self.LastShotTime = 0
 	self.LastTriggerState = false
 
-	-- Update world model to match current suppressor state (important when switching weapons)
 	self:UpdateWorldModel()
 
-	-- Initialize chamber state on deploy if not set
 	if self.ChamberRound == nil then
 		self.ChamberRound = false
 	end
 	
-	-- Check if player is currently sprinting when weapon is deployed
 	if IsValid(self.Owner) and self.Owner:KeyDown(IN_SPEED) then
 		local velocity = self.Owner:GetVelocity()
 		local speed = velocity:Length2D()
 		local isOnGround = self.Owner:IsOnGround()
 		
-		-- If actually sprinting (not just holding key while standing still)
 		if speed > 50 and isOnGround then
 			self.IronSightsPos = self.RunSightsPos
 			self.IronSightsAng = self.RunSightsAng
@@ -434,7 +310,7 @@ function SWEP:Deploy()
 		end
 	end
 	
-	-- Initialize animation variables on deploy (clientside)
+	-- CLIENT:
 	if CLIENT then
 		self.AnimationTime = 0
 		self.BreathIntensity = 0
@@ -444,10 +320,9 @@ function SWEP:Deploy()
 		self.LateralVelocity = 0
 		self.LateralVelocitySmooth = 0
 		self.LastGroundState = true
-		self.ADSRecoilIntensity = 0 -- For tracking ADS recoil animation
-		self.LastShotTime = 0 -- Track when last shot was fired
+		self.ADSRecoilIntensity = 0
+		self.LastShotTime = 0
 
-		-- Weapon input state (ADS, sprint, FOV transitions)
 		self.m9kr_IsInADS = false
 		self.m9kr_IsInSprint = false
 		self.m9kr_FOVCurrent = 0
@@ -463,14 +338,10 @@ function SWEP:Deploy()
 		self.ShouldDrawViewModel = true
 	end
 	
-	-- Handle first deploy vs subsequent deploys
 	if not self.FirstDeployDone then
-		-- First time deploying this weapon
 		self.FirstDeployDone = true
 
-		-- Deferred CLIENT initialization (moved from Initialize() for faster spawn)
 		if CLIENT then
-			-- Create instance-level Offset table for offset adjuster tool
 			if self.Offset then
 				local baseOffset = self.Offset
 				self.Offset = {
@@ -488,14 +359,12 @@ function SWEP:Deploy()
 				}
 			end
 
-			-- WepSelectIcon texture loading for weapon selection HUD
 			if not self.WepSelectIcon or self.WepSelectIcon == 0 then
 				local oldpath = "vgui/hud/name"
 				local newpath = string.gsub(oldpath, "name", self.Gun)
 				self.WepSelectIcon = surface.GetTextureID(newpath)
 			end
 
-			-- Initialize viewmodel visibility
 			local vm = self.Owner:GetViewModel()
 			if IsValid(vm) then
 				if self.ShowViewModel == nil or self.ShowViewModel then
@@ -510,30 +379,25 @@ function SWEP:Deploy()
 		local vm = self.Owner:GetViewModel()
 
 		if IsValid(vm) then
-			-- Try special first-time deploy animations
 			if self.Silenced then
-				-- For suppressed weapons, try ACT_VM_DRAW_EMPTY
 				local emptySeq = vm:SelectWeightedSequence(ACT_VM_DRAW_EMPTY)
 				if emptySeq and emptySeq > -1 then
 					vm:SendViewModelMatchingSequence(emptySeq)
-					drawAnim = nil  -- Don't send anim again
+					drawAnim = nil
 				end
 			else
-				-- For regular weapons, try ACT_VM_DRAW_DEPLOYED
 				local deploySeq = vm:SelectWeightedSequence(ACT_VM_DRAW_DEPLOYED)
 				if deploySeq and deploySeq > -1 then
 					vm:SendViewModelMatchingSequence(deploySeq)
-					drawAnim = nil  -- Don't send anim again
+					drawAnim = nil
 				end
 			end
 		end
 
-		-- Only send weapon anim if we didn't already send a sequence
 		if drawAnim then
 			self.Weapon:SendWeaponAnim(drawAnim)
 		end
 	else
-		-- Subsequent deploys use standard draw animation
 		if self.Silenced then
 			self.Weapon:SendWeaponAnim(ACT_VM_DRAW_SILENCED)
 		else
@@ -553,37 +417,31 @@ function SWEP:Deploy()
 end
  
 function SWEP:Holster()
-	-- Clean up burst state when holstering
 	self.BurstShotsRemaining = 0
 	self.NextBurstShotTime = nil
-	
-	-- Cancel any active reload timers to prevent ammo being added after weapon switch
+
+	-- Cancel active timers to prevent callbacks after weapon switch
 	local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
 	if timer.Exists(reloadTimerName) then
 		timer.Remove(reloadTimerName)
 	end
 	
-	-- Cancel reload sprint transition timer
 	local sprintTimerName = "M9K_ReloadSprint_" .. self:EntIndex()
 	if timer.Exists(sprintTimerName) then
 		timer.Remove(sprintTimerName)
 	end
-	
-	-- Cancel silencer attachment/detachment timer
+
 	local silencerTimerName = "M9K_Silencer_" .. self:EntIndex()
 	if timer.Exists(silencerTimerName) then
 		timer.Remove(silencerTimerName)
 	end
 	
-	-- Cancel reload state when holstering
 	if IsValid(self.Weapon) then
 		self.Weapon:SetNWBool("Reloading", false)
-		-- Reset NextPrimaryFire to prevent being unable to fire after mid-reload weapon swap
-		-- The draw animation delay will be added in Deploy()
+		-- Prevent stuck fire delay after mid-reload weapon swap
 		self.Weapon:SetNextPrimaryFire(CurTime())
 	end
 	
-	-- Reset crouch state to prevent issues during weapon switching
 	self.crouchMul = 0
 	self.bLastCrouching = false
 	self.fCrouchTime = nil
@@ -594,7 +452,6 @@ function SWEP:Holster()
 			self:ResetViewModelBones(vm)
 		end
 
-		-- Reset weapon input state so next weapon starts clean
 		self.m9kr_FOVCurrent = 0
 		self.m9kr_FOVTarget = 0
 		self.m9kr_IsInADS = false
@@ -602,14 +459,12 @@ function SWEP:Holster()
 		self.ShouldDrawViewModel = true
 	end
 
-	-- Stop action sounds (draw, reload, bolt, etc.) when switching weapons
-	-- Fire sounds use a different channel and are NOT stopped
+	-- Stop action sounds (fire sounds use a separate channel and are not stopped)
 	if self.ActionSounds and #self.ActionSounds > 0 then
 		for _, soundName in ipairs(self.ActionSounds) do
 			if IsValid(self.Weapon) then
 				self.Weapon:StopSound(soundName)
 			end
-			-- Also stop on viewmodel (some sounds may be played there)
 			if CLIENT and IsValid(self.Owner) and not self.Owner:IsNPC() then
 				local vm = self.Owner:GetViewModel()
 				if IsValid(vm) then
@@ -623,25 +478,22 @@ function SWEP:Holster()
 end
 
 function SWEP:OnRemove()
-	-- Clean up burst timer when weapon is removed
+	-- Clean up all active timers
 	local timerName = "M9K_Burst_" .. self:EntIndex()
 	if timer.Exists(timerName) then
 		timer.Remove(timerName)
 	end
 	
-	-- Clean up reload timer when weapon is removed
 	local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
 	if timer.Exists(reloadTimerName) then
 		timer.Remove(reloadTimerName)
 	end
 	
-	-- Clean up reload sprint transition timer when weapon is removed
 	local sprintTimerName = "M9K_ReloadSprint_" .. self:EntIndex()
 	if timer.Exists(sprintTimerName) then
 		timer.Remove(sprintTimerName)
 	end
 	
-	-- Clean up silencer timer when weapon is removed
 	local silencerTimerName = "M9K_Silencer_" .. self:EntIndex()
 	if timer.Exists(silencerTimerName) then
 		timer.Remove(silencerTimerName)
@@ -666,26 +518,21 @@ function SWEP:Precache()
 		util.PrecacheModel(self.WorldModel)
 end
 
--- Override CanPrimaryAttack to prevent engine's default "Weapon_AR2.Empty" click sound
+-- Override CanPrimaryAttack
 function SWEP:CanPrimaryAttack()
-	-- Check if we have ammo in clip
 	if self.Weapon:Clip1() <= 0 then
-		-- Mark chamber as empty
 		self.ChamberRound = false
-		
-		-- Allow reload on empty fire if we have reserve ammo
+
 		if self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType()) > 0 then
-			-- Trigger reload instead of returning false with click sound
 			if not self.Weapon:GetNWBool("Reloading") then
 				self:Reload()
 			end
 		end
-		return false -- No click sound, just return false
+		return false
 	end
 	return true
 end
 
--- Helper function to check if viewmodel has a specific animation sequence
 function SWEP:HasSequence(activityID)	
 	if not activityID or not IsValid(self) or not IsValid(self.Owner) then return false end
 
@@ -698,7 +545,6 @@ function SWEP:HasSequence(activityID)
 	return hasSeq
 end
 
--- Helper function to check if a sequence exists by name
 function SWEP:HasSequenceByName(sequenceName)
 	if not sequenceName or not IsValid(self) or not IsValid(self.Owner) then return false end
 
@@ -709,44 +555,35 @@ function SWEP:HasSequenceByName(sequenceName)
 	return seqID and seqID > 0 and seqID ~= -1
 end
 
--- Helper function to fire a single burst shot
 function SWEP:FireBurstShot()
 	if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then
 		self.BurstShotsRemaining = 0
 		return
 	end
 
-	-- Check if we still have ammo
 	if self.Weapon:Clip1() <= 0 then
 		self.BurstShotsRemaining = 0
 		return
 	end
 
-	-- CRITICAL: Stop burst immediately if player starts actually sprinting
-	-- Sprint only blocks if player is moving while holding sprint key on ground AND pressing movement keys
+	-- Cancel burst if player starts sprinting
 	local isSprintJumping = self.Owner:KeyDown(IN_SPEED) and not self.Owner:IsOnGround()
 	local isPressingMovement = self.Owner:KeyDown(IN_FORWARD) or self.Owner:KeyDown(IN_BACK) or self.Owner:KeyDown(IN_MOVELEFT) or self.Owner:KeyDown(IN_MOVERIGHT)
 	local isActuallySprinting = self.Owner:KeyDown(IN_SPEED) and self.Owner:IsOnGround() and self.Owner:GetVelocity():Length2D() > 20 and isPressingMovement
 	if isActuallySprinting and not isSprintJumping then
-		-- Player is actually sprinting on ground - cancel burst
 		self.BurstShotsRemaining = 0
 		return
 	end
 	
-	-- Fire the shot
 	self:ShootBulletInformation()
 	self.Weapon:TakePrimaryAmmo(1)
 
-	-- Track shot time for ADS recoil animation and low ammo warning
-	-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
+	-- In SP, SERVER must also call since CLIENT prediction may not run
 	if CLIENT or (game.SinglePlayer() and SERVER) then
 		self.LastShotTime = CurTime()
 		if self.CheckLowAmmo then self:CheckLowAmmo() end
 	end
 	
-	-- Determine fire animation based on ADS state
-	-- On SERVER: Check if owner is holding IN_ATTACK2 (for animation networking)
-	-- PrimaryAttack runs on SERVER, so we check owner's key state directly
 	local bIron = self.Owner:KeyDown(IN_ATTACK2)
 
 	if self.Silenced then
@@ -756,7 +593,6 @@ function SWEP:FireBurstShot()
 			self.Weapon:SendWeaponAnim(ACT_VM_PRIMARYATTACK_SILENCED)
 		end
 
-		-- Play sound with overlap support for high-RPM weapons
 		if self.SoundIndicatorInterval then
 			self.ShotsSinceSoundPlayed = (self.ShotsSinceSoundPlayed or 0) + 1
 			if self.ShotsSinceSoundPlayed >= self.SoundIndicatorInterval then
@@ -773,7 +609,6 @@ function SWEP:FireBurstShot()
 			self.Weapon:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 		end
 
-		-- Play sound with overlap support for high-RPM weapons
 		if self.SoundIndicatorInterval then
 			self.ShotsSinceSoundPlayed = (self.ShotsSinceSoundPlayed or 0) + 1
 			if self.ShotsSinceSoundPlayed >= self.SoundIndicatorInterval then
@@ -785,17 +620,14 @@ function SWEP:FireBurstShot()
 		end
 	end
 	
-	-- Muzzle flash and shell eject (deferred in MP for correct attachment positions)
 	self:M9KR_SpawnMuzzleFlash()
 	self.Owner:SetAnimation(PLAYER_ATTACK1)
 	self:M9KR_SpawnShellEject()
 
-	-- Schedule next burst shot if any remaining
-	-- Safety check: BurstShotsRemaining can be nil if weapon was switched mid-burst
+	-- Can be nil if weapon was switched mid-burst
 	if not self.BurstShotsRemaining then return end
 	self.BurstShotsRemaining = self.BurstShotsRemaining - 1
 	if self.BurstShotsRemaining > 0 then
-		-- Schedule next shot via Think() (timers don't survive MP prediction)
 		self.NextBurstShotTime = CurTime() + (self.BurstDelay or 0.05)
 	end
 end
@@ -805,15 +637,11 @@ function SWEP:PrimaryAttack()
 		return
 	end
 
-	-- Prevent firing if safety is engaged
 	if self:GetIsOnSafe() then
 		return
 	end
 
 	if self:CanPrimaryAttack() and self.Owner:IsPlayer() then
-		-- Allow shooting if: not actually sprinting, OR sprint jumping is active
-		-- Sprint jumping = SPEED held while not on ground
-		-- Actually sprinting = SPEED held, on ground, moving, AND pressing movement keys
 		local isSprintJumping = self.Owner:KeyDown(IN_SPEED) and not self.Owner:IsOnGround()
 		local isPressingMovement = self.Owner:KeyDown(IN_FORWARD) or self.Owner:KeyDown(IN_BACK) or self.Owner:KeyDown(IN_MOVELEFT) or self.Owner:KeyDown(IN_MOVERIGHT)
 		local isActuallySprinting = self.Owner:KeyDown(IN_SPEED) and self.Owner:IsOnGround() and self.Owner:GetVelocity():Length2D() > 20 and isPressingMovement
@@ -821,7 +649,6 @@ function SWEP:PrimaryAttack()
 		if (not isActuallySprinting or isSprintJumping) and not self.Owner:KeyDown(IN_RELOAD) then
 			-- Burst handling
 			if self:IsFireModeBurst() then
-				-- Don't start a new burst if one is already running
 				if self.BurstShotsRemaining and self.BurstShotsRemaining > 0 then
 					return
 				end
@@ -829,32 +656,23 @@ function SWEP:PrimaryAttack()
 				local clips = self.Weapon:Clip1()
 				local shotsToFire = math.min(self.BurstCount or 3, clips or 0)
 				if shotsToFire <= 0 then
-					-- Empty - no sound (TFA dry fire sounds handle this)
 					return
 				end
 				
-				-- Set BurstShotsRemaining BEFORE firing to prevent rapid-fire trigger spam
 				self.BurstShotsRemaining = shotsToFire - 1
 				
-				-- Fire first shot immediately
 				self:ShootBulletInformation()
 				self.Weapon:TakePrimaryAmmo(1)
 
-				-- Track shot time for ADS recoil animation and low ammo warning
-				-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
 				if CLIENT or (game.SinglePlayer() and SERVER) then
 					self.LastShotTime = CurTime()
 					if self.CheckLowAmmo then self:CheckLowAmmo() end
 				end
 
-				-- Determine fire animation based on ADS state and available sequences
-				-- On SERVER: Check if owner is holding IN_ATTACK2 (for animation networking)
-				-- PrimaryAttack runs on SERVER, so we check owner's key state directly
 				local bIron = self.Owner:KeyDown(IN_ATTACK2)
 				local shootAnim = ACT_VM_PRIMARYATTACK
 
 				if self.Silenced then
-						-- Silenced weapon logic
 						if bIron and self:HasSequence(ACT_VM_PRIMARYATTACK_2) then
 								self.Weapon:SendWeaponAnim(ACT_VM_PRIMARYATTACK_2)
 						elseif self:HasSequence(ACT_VM_PRIMARYATTACK_SILENCED) then
@@ -865,7 +683,6 @@ function SWEP:PrimaryAttack()
 						end
 						self:EmitSound(self.Primary.SilencedSound or "")
 				else
-						-- Non-silenced weapon logic
 						if bIron and self:HasSequence(ACT_VM_PRIMARYATTACK_1) then
 								self.Weapon:SendWeaponAnim(ACT_VM_PRIMARYATTACK_1)
 						else
@@ -873,17 +690,16 @@ function SWEP:PrimaryAttack()
 						end
 						self:EmitSound(self.Primary.Sound or "")
 				end
-				-- Muzzle flash and shell eject (deferred in MP for correct attachment positions)
+				-- Muzzle flash and shell eject
 				self:M9KR_SpawnMuzzleFlash()
 				self.Owner:SetAnimation(PLAYER_ATTACK1)
 				self:M9KR_SpawnShellEject()
 
-				-- Schedule remaining burst shots via Think() (timers don't survive MP prediction)
 				if self.BurstShotsRemaining > 0 then
 					self.NextBurstShotTime = CurTime() + (self.BurstDelay or 0.05)
 				end
 
-				-- Time before next trigger pull with tick interval compensation (BurstTriggerPull is now in seconds)
+				-- Fire rate timing with tick compensation
 				local curtime = CurTime()
 				local curatt = self.Weapon:GetNextPrimaryFire()
 				local diff = curtime - curatt
@@ -900,33 +716,26 @@ function SWEP:PrimaryAttack()
 				if self.BoltAction then
 					self:BoltBack()
 				end
-			-- Normal single-shot path (existing behavior)
+			-- Single-shot path
 			else
 				self:ShootBulletInformation()
 				self.Weapon:TakePrimaryAmmo(1)
 				
-				-- Mark that we fired from the chamber
 				if self.HasChamber and self.Weapon:Clip1() > 0 then
 					self.ChamberRound = true
 				elseif self.Weapon:Clip1() == 0 then
 					self.ChamberRound = false
 				end
 				
-			-- Track shot time for ADS recoil animation and low ammo warning
-			-- In SP, SERVER runs PrimaryAttack (CLIENT prediction may not), so SERVER must also call
 			if CLIENT or (game.SinglePlayer() and SERVER) then
 				self.LastShotTime = CurTime()
 				if self.CheckLowAmmo then self:CheckLowAmmo() end
 			end
 
-			-- Determine fire animation based on ADS state and available sequences
-			-- On SERVER: Check if owner is holding IN_ATTACK2 (for animation networking)
-			-- PrimaryAttack runs on SERVER, so we check owner's key state directly
 			local bIron = self.Owner:KeyDown(IN_ATTACK2)
 			local shootAnim = ACT_VM_PRIMARYATTACK
 
 				if self.Silenced then
-					-- Silenced weapon logic
 					if bIron and self:HasSequence(ACT_VM_PRIMARYATTACK_2) then
 							self.Weapon:SendWeaponAnim(ACT_VM_PRIMARYATTACK_2)
 					elseif self:HasSequence(ACT_VM_PRIMARYATTACK_SILENCED) then
@@ -937,7 +746,6 @@ function SWEP:PrimaryAttack()
 					end
 					self:EmitSound(self.Primary.SilencedSound)
 				else
-					-- Non-silenced weapon logic
 					if bIron and self:HasSequence(ACT_VM_PRIMARYATTACK_1) then
 							self.Weapon:SendWeaponAnim(ACT_VM_PRIMARYATTACK_1)
 					else
@@ -945,13 +753,12 @@ function SWEP:PrimaryAttack()
 					end
 					self:EmitSound(self.Primary.Sound)
 				end
-				-- Muzzle flash and shell eject (deferred in MP for correct attachment positions)
+				-- Muzzle flash and shell eject
 				self:M9KR_SpawnMuzzleFlash()
 				self.Owner:SetAnimation(PLAYER_ATTACK1)
 				self:M9KR_SpawnShellEject()
 
-				-- Set fire rate timing with tick interval compensation (CRITICAL for RPM control)
-				-- This ensures accurate fire rates on low tickrate servers
+				-- Fire rate timing with tick compensation
 				local curtime = CurTime()
 				local curatt = self.Weapon:GetNextPrimaryFire()
 				local diff = curtime - curatt
@@ -968,7 +775,7 @@ function SWEP:PrimaryAttack()
 					self:BoltBack()
 				end
 			end
-		end -- Close: if (not self.Owner:KeyDown(IN_SPEED)...)
+		end
 	elseif self:CanPrimaryAttack() and self.Owner:IsNPC() then
 		self:ShootBulletInformation()
 		self.Weapon:TakePrimaryAmmo(1)
@@ -976,7 +783,7 @@ function SWEP:PrimaryAttack()
 		self:EmitSound(self.Primary.Sound)
 		self.Owner:SetAnimation(PLAYER_ATTACK1)
 
-		-- Set fire rate timing with tick interval compensation for NPCs
+		-- Fire rate timing with tick compensation
 		local curtime = CurTime()
 		local curatt = self.Weapon:GetNextPrimaryFire()
 		local diff = curtime - curatt
@@ -992,28 +799,10 @@ function SWEP:PrimaryAttack()
 	end
 end
 
---[[
-	Deferred Effect System
-	In multiplayer, viewmodel attachment positions are unreliable during CLIENT prediction
-	because SetupBones hasn't run yet. Effects are queued and created during render time
-	(FireAnimationEvent or PostDrawViewModel) when positions are accurate.
-	In singleplayer, SERVER creates effects immediately (CLIENT prediction may not run
-	weapon attack functions in SP mode).
+-- Deferred effects: SP creates immediately; MP queues for render time (FireAnimationEvent/PostDrawViewModel).
+-- MP third-person uses NetworkVar shot counter; holdtype is synced via M9KRHoldType NetworkVar.
 
-	MP Third-Person Muzzle Flash:
-	SERVER increments the M9KRShotsFired NetworkVar on each shot. Non-owning clients
-	detect the change in Think() and create the muzzle flash effect locally. This avoids
-	prediction suppression issues with util.Effect from predicted hooks.
-
-	MP HoldType Synchronization:
-	SetHoldType is realm-local (not networked). M9KR_SetHoldType wraps it to also
-	update the M9KRHoldType NetworkVar on SERVER. All clients enforce the networked
-	holdtype in Think(), ensuring correct third-person player model animations.
-]]
-
--- Wrapper for SetHoldType that also networks the hold type to all clients
--- SetHoldType only affects the calling realm; this ensures non-owning clients
--- see correct third-person player model animations (ar2, pistol, shotgun, etc.)
+-- SetHoldType wrapper that also networks hold type to all clients
 function SWEP:M9KR_SetHoldType(holdType)
 	self:SetHoldType(holdType)
 	if SERVER and self.SetM9KRHoldType then
@@ -1033,7 +822,7 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
 	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
 
-	-- SP SERVER: create effects immediately (engine sends to single client)
+	-- SP
 	if game.SinglePlayer() and SERVER then
 		local fx = EffectData()
 		fx:SetEntity(self)
@@ -1045,16 +834,13 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 		return
 	end
 
-	-- MP SERVER: increment shot counter NetworkVar
-	-- Non-owning clients detect this change in Think() and create third-person effects
+	-- MP: increment shot counter
 	if SERVER then
 		local count = self:GetM9KRShotsFired() or 0
 		self:SetM9KRShotsFired(count + 1)
 	end
 
-	-- MP CLIENT (owning player): queue deferred viewmodel flash
-	-- Attachment positions are unreliable during prediction; the deferred system creates
-	-- the flash during FireAnimationEvent/PostDrawViewModel when bones are set up
+	-- MP CLIENT: queue deferred flash
 	if CLIENT then
 		if not IsFirstTimePredicted() then return end
 		self.m9kr_PendingMuzzleFlash = {name = effectName, smoke = doSmoke, time = CurTime()}
@@ -1068,47 +854,28 @@ function SWEP:M9KR_SpawnShellEject()
 	if self.Owner ~= LocalPlayer() then return end
 	if not self.ShellModel then return end
 
-	-- Queue for render time. In both SP and MP, the pending flag is consumed by:
-	-- 1. FireAnimationEvent (event 20 / EjectBrass) — if the model has QC events
-	-- 2. PostDrawViewModel fallback — if the model lacks QC events (TFA-ported models)
-	-- In SP, FireAnimationEvent also ejects unconditionally via game.SinglePlayer() check,
-	-- so models WITH QC events will eject there and clear the flag. Models WITHOUT QC events
-	-- will fall through to PostDrawViewModel where the flag gets consumed.
 	if not game.SinglePlayer() and not IsFirstTimePredicted() then return end
 	self.m9kr_PendingShellEject = true
 	self.m9kr_PendingShellEjectTime = CurTime()
 end
 
---[[
-	Shell Ejection System
-	Ejects physical shell casing models from the weapon's shell eject attachment
-
-	NOTE: Shell collision sounds are handled by the m9kr_shell effect.
-	No need for duplicate sound tables in weapon base.
-]]
 function SWEP:EjectShell()
-	-- Skip shell ejection for caseless ammunition weapons
 	if self.NoShellEject then return end
 	if not CLIENT then return end
 	if not IsValid(self) or not IsValid(self.Owner) then return end
 	if not self.ShellModel then return end
 
-	-- Only spawn viewmodel shells for the local player
 	if self.Owner ~= LocalPlayer() then return end
 
 	local vm = self.Owner:GetViewModel()
 	if not IsValid(vm) then return end
 
-	-- Resolve shell eject attachment: QC-cached > weapon property > default 2
-	-- QC data is authoritative (parsed from the model's animation events, always correct for the model)
-	-- Weapon config ShellEjectAttachment is a fallback for models without QC EjectBrass events
+	-- Attachment priority: QC-cached > weapon property > default 2
 	local attachmentId = self._qcShellAttachment or tonumber(self.ShellEjectAttachment) or 2
 
-	-- Get attachment position from viewmodel
 	local attachment = vm:GetAttachment(attachmentId)
 	if not attachment then return end
 
-	-- Create shell ejection effect directly
 	local effectData = EffectData()
 	effectData:SetOrigin(attachment.Pos)
 	effectData:SetNormal(attachment.Ang:Forward())
@@ -1118,22 +885,10 @@ function SWEP:EjectShell()
 	util.Effect("m9kr_shell", effectData)
 end
 
---[[
-	Override QC Shell Ejection Events
-	Blocks the legacy EjectBrass_* events from QC files to prevent double shell spawning
-	The custom EjectShell() system handles all shell ejection with collision sounds
-]]
 function SWEP:FireAnimationEvent(pos, ang, event, options)
-	-- Block all animation-based muzzle flash events (we use custom particle effects instead)
-	-- Event 21 = Primary muzzle flash (rifles, pistols)
-	-- Event 22 = Secondary muzzle flash (silenced weapons, alternate effects)
-	-- Event 5001 = CS:S muzzle flash
-	-- Event 5011 = DoD:S muzzle flash
-	-- Event 5021 = TF2 muzzle flash
-	-- Event 6001 = Attachment-based muzzle flash
+	-- Block muzzle flash events: 21 (primary), 22 (secondary), 5001 (CS:S), 5011 (DoD:S), 5021 (TF2), 6001 (attachment)
 	if event == 21 or event == 22 or event == 5001 or event == 5011 or event == 5021 or event == 6001 then
-		-- MP deferred effect: create muzzle flash now with animation-accurate position
-		-- Track that this model has QC muzzle events (prevents PostDrawViewModel fallback)
+		-- Create deferred muzzle flash; mark model as having QC muzzle events
 		if CLIENT then self.m9kr_HasQCMuzzleEvent = true end
 		if CLIENT and self.m9kr_PendingMuzzleFlash then
 			local pending = self.m9kr_PendingMuzzleFlash
@@ -1160,32 +915,26 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 			-- Track that this model has QC shell events (prevents PostDrawViewModel fallback)
 			self.m9kr_HasQCShellEvent = true
 
-			-- Parse QC parameters to cache the correct shell eject attachment
-			-- Format: "EjectBrass_556 3 90" → <effect_name> <attachment_id> <velocity>
+			-- Parse QC params: "EjectBrass_556 3 90" -> extract attachment ID
 			local parts = {}
 			for part in string.gmatch(optStr, "%S+") do
 				table.insert(parts, part)
 			end
 
-			-- Cache the QC attachment ID so EjectShell() uses the correct position
-			-- This auto-detects the shell eject attachment from the viewmodel's animation data
 			if parts[2] then
 				self._qcShellAttachment = tonumber(parts[2])
 			end
 
-			-- Create shell eject now (vm:GetAttachment is reliable during render)
-			-- SP: always eject when fire animation plays (no pending flag needed)
-			-- MP: only eject when the pending flag was set during prediction
+			-- Eject shell at render time (attachment positions are reliable here)
 			if self.m9kr_PendingShellEject or game.SinglePlayer() then
 				self.m9kr_PendingShellEject = nil
 				self.m9kr_PendingShellEjectTime = nil
 				self:EjectShell()
 			end
 		end
-		return true -- Block default Source Engine brass (EjectShell handles it)
+		return true -- Block default brass
 	end
 
-	-- Let other events pass through to default handler
 	return false
 end
 
@@ -1201,15 +950,11 @@ function SWEP:CheckWeaponsAndAmmo()
 	end
 end
 
--- Name: SWEP:ShootBulletInformation()
--- Desc: This func adds the damage, the recoil, the number of shots and the cone on the bullet.
 function SWEP:ShootBulletInformation()
 	local CurrentDamage, CurrentRecoil, CurrentCone
 
-	-- Increment continuous shot counter for progressive spread system (auto mode)
 	self.ContinuousShotCount = (self.ContinuousShotCount or 0) + 1
 
-	-- Track rapid fire heat for semi/burst spam detection
 	local curTime = CurTime()
 	self.LastShotTime = self.LastShotTime or 0
 	self.RapidFireHeat = self.RapidFireHeat or 0
@@ -1229,7 +974,6 @@ function SWEP:ShootBulletInformation()
 
 	self.LastShotTime = curTime
 
-	-- Use dynamic spread system based on fire mode and ADS state
 	CurrentCone = self:GetDynamicSpread()
 
 	local damagedice = math.Rand(0.85, 1.3)
@@ -1237,7 +981,6 @@ function SWEP:ShootBulletInformation()
 	CurrentDamage = basedamage * damagedice
 	CurrentRecoil = self.Primary.Recoil
 
-	-- Check ADS state on both CLIENT and SERVER
 	local isInADS = false
 	if CLIENT then
 		isInADS = self.m9kr_IsInADS or false
@@ -1257,42 +1000,30 @@ function SWEP:ShootBulletInformation()
 				  not isSprintJumping
 	end
 
-	-- Store original kick values for restoration after shooting
 	local origKickUp = self.Primary.KickUp
 	local origKickDown = self.Primary.KickDown
 	local origKickHorizontal = self.Primary.KickHorizontal
 
-	-- Check if player is FULLY crouched on ground (not crouch jumping or transitioning)
-	-- Compare current view offset to ducked offset to ensure player is fully ducked
-	-- Only check for players - NPCs/nextbots don't have GetViewOffsetDucked()
+	-- Check if fully crouched and grounded
 	local isFullyCrouched = false
 	if self.Owner:IsPlayer() and self.Owner:Crouching() and self.Owner:IsOnGround() then
 		local currentViewZ = self.Owner:GetViewOffset().z
 		local duckedViewZ = self.Owner:GetViewOffsetDucked().z
-		-- Allow small tolerance (1 unit) for floating point precision
 		isFullyCrouched = (currentViewZ <= duckedViewZ + 1)
 	end
 
-	-- Apply crouch modifiers (these stack with ADS modifiers)
+	-- Crouch modifiers
 	if isFullyCrouched then
-		-- Crouch reduces recoil when fully stable on ground
-		-- KickUp: 25% reduction (retain 75%)
-		-- KickDown: 10% reduction (retain 90%)
-		-- KickHorizontal: 10% reduction (retain 90%)
 		self.Primary.KickUp = origKickUp * 0.75
 		self.Primary.KickDown = origKickDown * 0.90
 		self.Primary.KickHorizontal = origKickHorizontal * 0.90
 	end
 
-	-- Apply ADS modifiers on top of crouch (if applicable)
 	if isInADS and self.Owner:KeyDown(IN_ATTACK2) then
-		-- ADS reduces KickDown and KickHorizontal by 75% (retain 25%)
-		-- KickUp stays at crouch value (or original if not crouched)
-		-- These multiply with crouch modifiers if both active
 		self.Primary.KickDown = self.Primary.KickDown * 0.25
 		self.Primary.KickHorizontal = self.Primary.KickHorizontal * 0.25
 
-		-- Fire with reduced recoil (divide by 6 for TFA-style ADS recoil reduction)
+		-- ADS recoil reduction
 		self:ShootBullet(CurrentDamage, CurrentRecoil / 6, self.Primary.NumShots, CurrentCone)
 	-- Player is not aiming
 	else
@@ -1301,17 +1032,12 @@ function SWEP:ShootBulletInformation()
 		end
 	end
 
-	-- Restore original kick values immediately after shooting
 	self.Primary.KickUp = origKickUp
 	self.Primary.KickDown = origKickDown
 	self.Primary.KickHorizontal = origKickHorizontal
 
 end
  
-/*---------------------------------------------------------
-   Name: SWEP:ShootBullet()
-   Desc: A convenience func to shoot bullets.
------------------------------------------------------*/
 function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 
 	num_bullets             = num_bullets or 1
@@ -1319,23 +1045,19 @@ function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 
 	self:ShootEffects()
 
-	-- Increment shot counter for tracer frequency calculation
 	self.ShotCount = (self.ShotCount or 0) + 1
 
-	-- Use M9K:R dynamic tracer system
 	local shouldShowTracer = false
 	local tracerName = "Tracer"
 	local tracerType = 0
 	local tracerData = nil
 
-	-- Disable tracers for shotgun pellets (buckshot), keep for slugs (single projectile)
-	-- Also disable if weapon has NoTracers = true (for bows, crossbows, etc.)
+	-- Disable tracers for shotgun pellets and NoTracers weapons
 	local isShotgunPellets = (num_bullets > 1)
 
 	if M9KR and M9KR.Tracers and M9KR.Tracers.ShouldShowTracer and not isShotgunPellets and not self.NoTracers then
 		shouldShowTracer, tracerName = M9KR.Tracers.ShouldShowTracer(self, self.ShotCount)
 
-		-- Get tracer visual type from ballistics database
 		tracerData = M9KR.Tracers.GetTracerDataFromShell(self.ShellModel)
 		tracerType = tracerData and tracerData.tracerType or 0
 	end
@@ -1350,14 +1072,12 @@ function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 		bullet.Force    = damage * 0.25                                 -- Amount of force to give to phys objects
 		bullet.Damage   = damage
 		bullet.Callback = function(attacker, tracedata, dmginfo)
-		-- Spawn M9K:R tracer based on frequency
 		if shouldShowTracer and M9KR and M9KR.Tracers and M9KR.Tracers.SpawnTracerEffect then
 			M9KR.Tracers.SpawnTracerEffect(self, tracedata.HitPos, tracerData)
 
 		end
 
-		-- Spawn bullet impact effects (CLIENT only, prediction check)
-		-- Skip if DisableBulletImpacts is true (for high-RPM weapons like minigun)
+		-- Bullet impact effects (CLIENT only)
 		if CLIENT and IsFirstTimePredicted() and tracedata.HitPos and not self.DisableBulletImpacts then
 			local impactCvar = GetConVar("m9kr_bullet_impact")
 			local metalCvar = GetConVar("m9kr_metal_impact")
@@ -1368,7 +1088,6 @@ function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 				fx:SetOrigin(tracedata.HitPos)
 				fx:SetNormal(tracedata.HitNormal or Vector(0, 0, 1))
 
-				-- Material-specific effects
 				local effectName = nil
 				if tracedata.MatType == MAT_METAL and metalCvar and metalCvar:GetInt() == 1 then
 					effectName = "m9kr_metal_impact"
@@ -1386,7 +1105,6 @@ function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 			end
 		end
 
-		-- Route to new modular penetration system
 		if self.Penetration and IsFirstTimePredicted() then
 			-- Construct paininfo table from dmginfo object
 			local paininfo = {
@@ -1396,7 +1114,7 @@ function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 			self:BulletPenetrate(0, attacker, tracedata, paininfo)
 		end
 
-		-- Arrow impact: spawn arrow at hit point for non-penetrating weapons
+		-- Arrow impact for non-penetrating weapons
 		if not self.Penetration and SERVER and self.FireArrows then
 			self:SpawnImpactArrow({
 				pos = tracedata.HitPos,
@@ -1416,22 +1134,16 @@ function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 		end
 	end
 
-	-- Calculate base recoil angles
 	local kickPitch = math.Rand(-self.Primary.KickDown, -self.Primary.KickUp)
 	local kickYaw = math.Rand(-self.Primary.KickHorizontal, self.Primary.KickHorizontal)
 
-	-- Apply recoil to camera using ViewPunch (visual screen shake) - players only
 	local anglo1 = Angle(kickPitch, kickYaw, 0)
 	if self.Owner:IsPlayer() then
 		self.Owner:ViewPunch(anglo1)
 
-		-- Track recoil for viewmodel animation scaling (used in CalcView)
 		self.ViewPunchP = (self.ViewPunchP or 0) + kickPitch
 		self.ViewPunchY = (self.ViewPunchY or 0) + kickYaw
 
-		-- Apply ACTUAL camera recoil immediately (original M9K approach)
-		-- This moves the player's aim, not just visual shake
-		-- Applied immediately on firing, not in Think() to avoid mouse input conflicts
 		local eyes = self.Owner:EyeAngles()
 		eyes.pitch = math.Clamp(eyes.pitch + kickPitch, -89, 89)  -- Clamp to prevent overflow
 		eyes.yaw = eyes.yaw + kickYaw
@@ -1439,11 +1151,6 @@ function SWEP:ShootBullet(damage, recoil, num_bullets, aimcone)
 	end
 end
 
-/*---------------------------------------------------------
-   Name: SWEP:SpawnImpactArrow()
-   Desc: Spawns a visual arrow prop at the final bullet
-         impact point. Used by weapons with SWEP.FireArrows = true.
------------------------------------------------------*/
 function SWEP:SpawnImpactArrow(hitData)
 	if not hitData or not hitData.pos then return end
 
@@ -1452,7 +1159,6 @@ function SWEP:SpawnImpactArrow(hitData)
 
 	arrow:SetModel("models/viper/mw/attachments/crossbow/attachment_vm_sn_crossbow_mag.mdl")
 
-	-- Position arrow so the tip is embedded and the shaft sticks out
 	local dir = hitData.dir or Vector(0, 0, 0)
 	arrow:SetPos(hitData.pos - dir * 6)
 	arrow:SetAngles(dir:Angle())
@@ -1462,7 +1168,6 @@ function SWEP:SpawnImpactArrow(hitData)
 
 	arrow:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 
-	-- Stick to entities so the arrow follows them (ragdolls, NPCs, etc.)
 	if IsValid(hitData.ent) and hitData.ent:GetClass() != "worldspawn" then
 		arrow:SetParent(hitData.ent)
 	end
@@ -1470,14 +1175,7 @@ function SWEP:SpawnImpactArrow(hitData)
 	SafeRemoveEntityDelayed(arrow, 10)
 end
 
-/*---------------------------------------------------------
-   Name: SWEP:BulletPenetrate()
-   Desc: Routes to modular penetration system in lua/autorun/m9kr_penetration.lua
-         ConVar: m9kr_penetration_mode
-         0 = Disabled, 1 = Dynamic (ballistics-based), 2 = Vanilla (original M9K)
------------------------------------------------------*/
 function SWEP:BulletPenetrate(bouncenum, attacker, tr, paininfo)
-	-- Route to modular penetration system (protected)
 	local res = false
 	if M9KR and M9KR.Penetration and M9KR.Penetration.CalculatePenetration then
 		local ok, penResult = pcall(M9KR.Penetration.CalculatePenetration, self, bouncenum, attacker, tr, paininfo)
@@ -1488,7 +1186,7 @@ function SWEP:BulletPenetrate(bouncenum, attacker, tr, paininfo)
 		end
 	end
 
-	-- Arrow impact: when bullet stops (penetration returns false), spawn arrow at this point
+	-- Spawn arrow if bullet stopped
 	if not res and SERVER and self.FireArrows and tr then
 		self:SpawnImpactArrow({
 			pos = tr.HitPos,
@@ -1509,13 +1207,11 @@ function SWEP:Reload()
 		return
 	end
 
-	-- Prevent reloading if safety is engaged or USE is held (USE + RELOAD = fire mode toggle)
 	if self:GetIsOnSafe() or self.Owner:KeyDown(IN_USE) then
 		return
 	end
 
-	-- Prevent reload from triggering right after safety toggle or fire mode switch
-	-- This fixes the issue where releasing USE + R could trigger a reload
+	-- Cooldown after safety/fire mode toggle
 	if self.NextSafetyToggle and CurTime() < self.NextSafetyToggle then
 		return
 	end
@@ -1523,14 +1219,12 @@ function SWEP:Reload()
 		return
 	end
 
-	-- Prevent reload spam - don't allow reloading if already reloading
 	if self.Weapon:GetNWBool("Reloading") then
 		return
 	end
 
 	self.BurstShotsRemaining = nil
 
-	-- Reset tracer shot counter on reload (fresh magazine = reset tracer pattern)
 	self.ShotCount = 0
 	
 	if self.Owner:IsNPC() then
@@ -1542,19 +1236,16 @@ function SWEP:Reload()
 		return
 	end
 	
-	-- Chamber system: Handle +1 reload mechanic
+	-- Chamber +1 reload
 	local currentClip = self:Clip1()
 	local maxClip = self.Primary.ClipSize
 	local reserveAmmo = self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType())
 	local isEmpty = currentClip == 0
 	
-	-- Don't reload if already at max capacity (including chamber)
 	if self.HasChamber and not self.noChamber then
 		if currentClip >= maxClip + 1 then
 			return
 		end
-		-- Allow reload if magazine is full (maxClip) but we don't have the +1 yet
-		-- This enables tactical reload from full magazine to get chamber round
 	else
 		if currentClip >= maxClip then
 			return
@@ -1628,7 +1319,6 @@ function SWEP:Reload()
 			end
 		end
 
-		-- FOV managed by UpdateWeaponInputState/CalcView
 		self:SetIronsights(false)
 
 		-- Handle the +1 ammo after animation completes
@@ -1669,15 +1359,12 @@ function SWEP:Reload()
 
 	self:SetNextPrimaryFire(CurTime() + (self:SequenceDuration() / (self.ReloadSpeedModifier or 1)) + 0.1)
 
-	-- Chamber mechanics: Mark whether we should add +1 after animation completes
+	-- Chamber +1 tracking
 	if self.HasChamber and not isEmpty then
-		-- Tactical reload: will get +1 chamber round after animation
 		self.ChamberRound = true
 	elseif self.HasChamber and isEmpty then
-		-- Empty reload: NO +1 for empty reload
 		self.ChamberRound = false
 	else
-		-- Chamber system disabled
 		if self.HasChamber then
 			self.ChamberRound = false
 		end
@@ -1693,11 +1380,7 @@ function SWEP:Reload()
 
 	if SERVER and IsValid(self.Weapon) then
 		if self.Weapon:Clip1() < self.Primary.ClipSize and not self.Owner:IsNPC() then
-			-- When the current clip < full clip and the rest of your ammo > 0, then
-			-- FOV managed by UpdateWeaponInputState/CalcView
-			-- Zoom = 0
 			self:SetIronsights(false)
-			-- Set the ironsight to false
 			self.Weapon:SetNWBool("Reloading", true)
 
 			-- Show reload animation to other players
@@ -1711,7 +1394,6 @@ function SWEP:Reload()
 				return
 			end
 			
-			-- Chamber system: Handle all ammo distribution after reload animation completes
 			local currentClip = self.Weapon:Clip1()
 			local maxClip = self.Primary.ClipSize
 			local reserveAmmo = self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType())
@@ -1748,7 +1430,6 @@ function SWEP:Reload()
 					if self.Weapon:GetNextPrimaryFire() <= (CurTime() + 0.03) then
 						self.Weapon:SetNextPrimaryFire(CurTime() + 0.3)
 					end
-					-- FOV managed by UpdateWeaponInputState/CalcView
 					self:SetIronsights(false)
 					
 					-- Delay sprint transition for smoother feel
@@ -1777,7 +1458,6 @@ function SWEP:Reload()
 					return
 				end
 				if self.Scoped == false then
-					-- FOV managed by UpdateWeaponInputState/CalcView
 					self:SetSprint(false)
 					self:SetIronsights(true, self.Owner)
 				else
@@ -1785,7 +1465,6 @@ function SWEP:Reload()
 				end
 			else
 				if SERVER then
-					-- FOV managed by UpdateWeaponInputState/CalcView
 					self:SetIronsights(false, self.Owner)
 					self:SetSprint(false)
 				end
@@ -1800,7 +1479,6 @@ function SWEP:PostReloadScopeCheck()
 		if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
 				if CLIENT then return end
 				if self.Scoped == false then
-						-- FOV managed by UpdateWeaponInputState/CalcView
 						self:SetSprint(false)
 						self:SetIronsights(true, self.Owner)
 						self.DrawCrosshair = false
@@ -1810,70 +1488,32 @@ function SWEP:PostReloadScopeCheck()
 				if self.Weapon:GetNextPrimaryFire() <= (CurTime() + .03) then
 						self.Weapon:SetNextPrimaryFire(CurTime()+0.3)
 				end
-				-- FOV managed by UpdateWeaponInputState/CalcView
 				self:SetIronsights(false)
 				self:SetSprint(true)
 		else return end
 end
  
---[[
-	Suppressor Attachment/Detachment System with Animation and Hold Type Management
-
-	FEATURES:
-	- Weapon goes into PASSIVE hold type during attachment/detachment animation
-	- ATTACHING: Suppressor is NOT visible until animation completes
-	- DETACHING: Suppressor STAYS visible until animation completes
-	- After animation completes, weapon returns to normal hold type
-	- Fully networked (CLIENT and SERVER) for multiplayer visibility
-
-	ATTACHMENT FLOW:
-	1. Player presses USE + ATTACK2 (suppressor currently OFF)
-	2. Weapon immediately switches to PASSIVE hold type (lowers gun)
-	3. ATTACH animation plays on viewmodel
-	4. IsAttachingSuppressor = true (hides suppressor on world model)
-	5. After animation completes:
-	   - Hold type restores to original (gun comes back up)
-	   - IsAttachingSuppressor = false
-	   - Suppressor becomes visible on world model
-
-	DETACHMENT FLOW:
-	1. Player presses USE + ATTACK2 (suppressor currently ON)
-	2. Weapon immediately switches to PASSIVE hold type (lowers gun)
-	3. DETACH animation plays on viewmodel
-	4. IsDetachingSuppressor = true (keeps suppressor visible on world model)
-	5. After animation completes:
-	   - Hold type restores to original (gun comes back up)
-	   - IsDetachingSuppressor = false
-	   - Suppressor disappears from world model
-]]--
 function SWEP:Silencer()
 	if self.NextSilence > CurTime() then return end
 
 	if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
-	-- Exit iron sights for attachment animation
-	-- FOV managed by UpdateWeaponInputState/CalcView
 	self:SetIronsights(false)
 
-	-- Store original hold type before changing to passive
 	if not self.OriginalHoldType then
 		self.OriginalHoldType = self.HoldType or "ar2"
 	end
 
-	-- Determine new suppressor state (toggling)
 	local isAttaching = not self.Silenced
 
-	-- STEP 1: Change hold type to PASSIVE (lowers gun)
 	self:M9KR_SetHoldType("passive")
 
-	-- STEP 2: Play attachment/detachment animation and set animation flags
 	if isAttaching then
 		-- ATTACHING SUPPRESSOR
 		self:SendWeaponAnim(ACT_VM_ATTACH_SILENCER)
 		self.Silenced = true
 		self:SetIsSuppressed(true)  -- Network suppressor state (will be visible after animation)
 
-		-- Set ATTACH animation flag (hides suppressor during animation)
 		self:SetIsAttachingSuppressor(true)
 		self:SetIsDetachingSuppressor(false)
 	else
@@ -1882,51 +1522,39 @@ function SWEP:Silencer()
 		self.Silenced = false
 		self:SetIsSuppressed(false)  -- Network suppressor state (will be hidden after animation)
 
-		-- Set DETACH animation flag (keeps suppressor visible during animation)
 		self:SetIsAttachingSuppressor(false)
 		self:SetIsDetachingSuppressor(true)
 	end
 
-	-- Calculate animation duration
 	local animDuration = self.Owner:GetViewModel():SequenceDuration() + 0.1
 	local animEndTime = CurTime() + animDuration
 
-	-- Store animation end time for networked sync
 	self:SetSuppressorAnimEndTime(animEndTime)
 
-	-- Prevent firing during animation
 	if self.Weapon:GetNextPrimaryFire() <= animEndTime then
 		self.Weapon:SetNextPrimaryFire(animEndTime)
 	end
 	self.NextSilence = animEndTime
 
-	-- STEP 3: Update world model based on animation state
-	-- - ATTACH: Will hide suppressor (IsAttachingSuppressor = true)
-	-- - DETACH: Will keep suppressor visible (IsDetachingSuppressor = true)
 	self:UpdateWorldModel()
 
-	-- STEP 4: Create timer to complete animation
 	local silencerTimerName = "M9K_Silencer_" .. self:EntIndex()
 	timer.Create(silencerTimerName, animDuration, 1, function()
 		if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
-		-- Animation complete - restore hold type (gun comes back up)
+		-- Restore hold type
 		self:M9KR_SetHoldType(self.OriginalHoldType or self.HoldType)
 
-		-- Clear animation flags
 		self:SetIsAttachingSuppressor(false)
 		self:SetIsDetachingSuppressor(false)
 
-		-- Update world model to show final state
-		-- - If was ATTACHING: Suppressor now becomes visible
-		-- - If was DETACHING: Suppressor now disappears
+		-- Update world model
 		self:UpdateWorldModel()
 
 		-- Handle player input after animation completes
 		if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
 			if CLIENT then return end
 			if self.Scoped == false then
-				-- FOV managed by UpdateWeaponInputState/CalcView
 				self:SetSprint(false)
 				self:SetIronsights(true, self.Owner)
 				self.DrawCrosshair = false
@@ -1936,61 +1564,36 @@ function SWEP:Silencer()
 			if self.Weapon:GetNextPrimaryFire() <= (CurTime() + 0.3) then
 				self.Weapon:SetNextPrimaryFire(CurTime() + 0.3)
 			end
-			-- FOV managed by UpdateWeaponInputState/CalcView
 			self:SetIronsights(false)
 			self:SetSprint(true)
 		end
 	end)
 end
  
---[[
-	Safety Toggle System
-
-	Toggles weapon safety on/off using USE + ATTACK (fire button)
-
-	SAFE MODE BEHAVIOR:
-	- Weapon switches to PASSIVE hold type (lowered position)
-	- Viewmodel uses RunSightsPos and RunSightsAng positioning
-	- Cannot shoot, change fire modes, attach/detach suppressor, or scope
-	- HUD displays "SAFE" in red
-	- Crosshair is hidden
-
-	HOT STATUS BEHAVIOR:
-	- Weapon restores normal hold type
-	- Normal viewmodel positioning
-	- All weapon functions enabled
-]]--
 function SWEP:SafetyToggle()
 	if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
-	-- Cooldown check (prevent spamming) - increased to 0.6s
+	-- Cooldown
 	if self.NextSafetyToggle > CurTime() then return end
 	self.NextSafetyToggle = CurTime() + 0.6
 
-	-- SERVER: Toggle safety state and handle game logic
 	if SERVER then
 		local newSafetyState = not self:GetIsOnSafe()
 		self:SetIsOnSafe(newSafetyState)
 
 		if newSafetyState then
-			-- ENGAGING SAFETY - force exit ADS/sprint
 			self:SetIronsights(false)
 			self:SetSprint(false)
 		else
-			-- DISENGAGING SAFETY - add firing delay (slightly longer than reload)
 			self:SetNextPrimaryFire(CurTime() + 0.5)
 		end
 	end
 
-	-- CLIENT: Handle visual/audio feedback
 	if CLIENT then
 		local newSafetyState = not self:GetIsOnSafe()
 
-		-- Play AR2 empty sound (same as fire mode switching)
 		self.Weapon:EmitSound("Weapon_AR2.Empty")
 
-		-- Exit ADS/sprint visually
-		-- FOV managed by UpdateWeaponInputState/CalcView
 		self:SetIronsights(false)
 		self:SetSprint(false)
 
@@ -1998,24 +1601,17 @@ function SWEP:SafetyToggle()
 			-- Hide crosshair
 			self.DrawCrosshair = false
 
-			-- Start safety transition timing (for smooth viewmodel animation)
 			self.fSafetyTime = CurTime()
 			self.bLastSafety = true
 		else
-			-- Disengage safety - start idle transition
 			self.fIdleTime = CurTime()
 			self.bLastSafety = false
 
-			-- Restore normal crosshair
 			self.DrawCrosshair = self.OrigCrossHair
 		end
 	end
 end
 
---[[
-	SafetyOn - Enter safety mode (SHIFT + E + R)
-	Saves the current fire mode before entering safety
-]]--
 function SWEP:SafetyOn()
 	if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 	if self:GetIsOnSafe() then return end  -- Already in safety
@@ -2024,17 +1620,14 @@ function SWEP:SafetyOn()
 	if self.NextSafetyToggle > CurTime() then return end
 	self.NextSafetyToggle = CurTime() + 0.6
 
-	-- Save current fire mode before entering safety
 	self.FireModeBeforeSafety = self.CurrentFireMode or 1
 
-	-- SERVER: Enable safety
 	if SERVER then
 		self:SetIsOnSafe(true)
 		self:SetIronsights(false)
 		self:SetSprint(false)
 	end
 
-	-- CLIENT: Visual/audio feedback
 	if CLIENT then
 		self.Weapon:EmitSound("Weapon_AR2.Empty")
 		self:SetIronsights(false)
@@ -2042,15 +1635,10 @@ function SWEP:SafetyOn()
 		self.DrawCrosshair = false
 		self.fSafetyTime = CurTime()
 		self.bLastSafety = true
-		-- Skip fire mode switch animation when entering safety
 		self.SafetyToggleTime = CurTime()
 	end
 end
 
---[[
-	SafetyOff - Exit safety mode (E + R when in safety)
-	Restores the fire mode that was active before entering safety
-]]--
 function SWEP:SafetyOff()
 	if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 	if not self:GetIsOnSafe() then return end  -- Not in safety
@@ -2059,7 +1647,6 @@ function SWEP:SafetyOff()
 	if self.NextSafetyToggle > CurTime() then return end
 	self.NextSafetyToggle = CurTime() + 0.6
 
-	-- SERVER: Disable safety and restore fire mode
 	if SERVER then
 		self:SetIsOnSafe(false)
 		self:SetNextPrimaryFire(CurTime() + 0.5)
@@ -2078,16 +1665,13 @@ function SWEP:SafetyOff()
 		end
 	end
 
-	-- Block immediate fire mode cycling after exiting safety
 	self.NextFireSelect = CurTime() + 0.5
 
-	-- CLIENT: Visual/audio feedback
 	if CLIENT then
 		self.Weapon:EmitSound("Weapon_AR2.Empty")
 		self.fIdleTime = CurTime()
 		self.bLastSafety = false
 		self.DrawCrosshair = self.OrigCrossHair
-		-- Skip fire mode switch animation when exiting safety
 		self.SafetyToggleTime = CurTime()
 	end
 end
@@ -2096,22 +1680,12 @@ function SWEP:SelectFireMode()
 	if self.NextFireSelect and CurTime() < self.NextFireSelect then return end
 	self.NextFireSelect = CurTime() + 0.5
 
-	-- Single-mode weapons: no cycling, no sound
 	if self:GetFireModeCount() <= 1 then return end
 
 	-- Cycle to the next fire mode
 	self:CycleFireMode()
 end
- 
--- ADS sounds, FOV transitions, UpdateWeaponInputState, M9KR_StartFOVTransition, M9KR_GetADSTargetFOV are in cl_init.lua
 
--- CalcView is in cl_init.lua
-
--- IronSight
---[[
-IronSight - Simplified gun_base variant
-This function handles SERVER-side game logic and CLIENT-side animation state
-]]
 function SWEP:IronSight()
 	if not IsValid(self) or not IsValid(self.Owner) then
 		return
@@ -2121,10 +1695,7 @@ function SWEP:IronSight()
 		if self.ResetSights and CurTime() >= self.ResetSights then
 			self.ResetSights = nil
 
-			-- Clear reloading flag on CLIENT to prevent stale NWBool from blocking
-			-- the next reload attempt. The SERVER timer clears this 0.1s later
-			-- authoritatively, but the CLIENT needs it cleared now so that predicted
-			-- Reload() calls can proceed and display the animation correctly.
+			-- Clear CLIENT reloading flag so predicted Reload() calls can proceed
 			if CLIENT then
 				self.Weapon:SetNWBool("Reloading", false)
 			end
@@ -2137,10 +1708,7 @@ function SWEP:IronSight()
 		end
 	end
 
-	-- Safety and fire mode controls (SERVER only):
-	-- SHIFT + E + R = Enter safety mode
-	-- E + R (when in safety) = Exit safety and restore last fire mode
-	-- E + R (when not in safety, no SHIFT) = Cycle fire mode
+	-- Safety/fire mode controls: SHIFT+E+R = safety, E+R = toggle safety or cycle mode
 	if SERVER and self.Owner:KeyDown(IN_USE) and self.Owner:KeyPressed(IN_RELOAD) then
 		if self:GetIsOnSafe() then
 			self:SafetyOff()
@@ -2151,13 +1719,11 @@ function SWEP:IronSight()
 		end
 	end
 
-	-- CLIENT: Detect safety state changes and play sound
 	if CLIENT then
 		local currentSafety = self:GetIsOnSafe()
 		if self.LastSafetyState == nil then
 			self.LastSafetyState = currentSafety
 		elseif self.LastSafetyState ~= currentSafety then
-			-- Safety state changed, play sound and update visual state
 			self.Weapon:EmitSound("Weapon_AR2.Empty")
 			self.SafetyToggleTime = CurTime()
 			self.bLastSafety = currentSafety
@@ -2170,15 +1736,13 @@ function SWEP:IronSight()
 		end
 	end
 
-	-- Suppressor attachment/detachment (blocked when safety is on or reloading)
+	-- Suppressor toggle
 	if not self:GetIsOnSafe() and self.CanBeSilenced and self.NextSilence < CurTime() and not self.Weapon:GetNWBool("Reloading") then
 		if self.Owner:KeyDown(IN_USE) and self.Owner:KeyPressed(IN_ATTACK2) then
 			self:Silencer()
 		end
 	end
 
-	-- BobScale/SwayScale management - reduced when in ADS
-	-- Check CLIENT-side ADS state from UpdateWeaponInputState
 	local isInADS = CLIENT and (self.m9kr_IsInADS or false) or false
 
 	if isInADS and self.Owner:KeyDown(IN_ATTACK2) and not self.Owner:KeyDown(IN_USE) and not self:GetIsOnSafe() and not self.Owner:KeyDown(IN_SPEED) then
@@ -2189,23 +1753,13 @@ function SWEP:IronSight()
 		self.BobScale = 0.1
 	end
 end
- 
--- UpdateProgressRatios is in cl_init.lua
 
---[[
-	UpdateSafetyHoldType - Enforce hold type based on safety state
-	Runs on BOTH client and server. M9KR_SetHoldType networks the hold type
-	via NetworkVar, so server changes are visible to all clients in Think.
-	Replaces the former global CLIENT Think hook (safety handler)
-]]--
 function SWEP:UpdateSafetyHoldType()
 	if not self.GetIsOnSafe then return end
 
 	local isSafe = self:GetIsOnSafe()
 
-	-- Determine target hold type
 	if isSafe then
-		-- Safety engaged: use passive/normal depending on weapon type
 		local safeHoldType = "passive"
 		if self.OriginalHoldType == "pistol" or self.OriginalHoldType == "revolver" then
 			safeHoldType = "normal"
@@ -2214,14 +1768,12 @@ function SWEP:UpdateSafetyHoldType()
 			self:M9KR_SetHoldType(safeHoldType)
 		end
 	else
-		-- Safety off: restore original hold type
 		local targetHoldType = self.OriginalHoldType or "ar2"
 		if self.HoldType ~= targetHoldType then
 			self:M9KR_SetHoldType(targetHoldType)
 		end
 	end
 
-	-- CLIENT: Track transition start time for smooth viewmodel animation
 	if CLIENT then
 		if self.m9kr_LastSafetyHoldTypeState == nil then
 			self.m9kr_LastSafetyHoldTypeState = isSafe
@@ -2232,34 +1784,22 @@ function SWEP:UpdateSafetyHoldType()
 	end
 end
 
--- GetSafetyTransitionMul, ApplyViewModelBoneMods, and ResetViewModelBones are in cl_init.lua
-
--- Belt-fed, low ammo, shell ejection, bullet impact, and PreDrawViewModel hook are in cl_init.lua
-
--- Think
 function SWEP:Think()
-	-- Critical safety check for weapon state during transitions
 	if not IsValid(self) or not IsValid(self.Weapon) then
 		return
 	end
 
-	-- Check if owner is valid - weapon switching can invalidate this
 	if not IsValid(self.Owner) or not self.Owner:IsPlayer() then
 		return
 	end
 
-	-- Reset continuous shot counter when trigger is released (for progressive spread system)
 	local triggerDown = self.Owner:KeyDown(IN_ATTACK)
 	if self.LastTriggerState and not triggerDown then
-		-- Trigger was just released - reset shot counter
 		self.ContinuousShotCount = 0
 	end
 	self.LastTriggerState = triggerDown
 
-	-- CLIENT: Sync Primary.Automatic with SERVER fire mode
-	-- CycleFireMode runs SERVER-only, so CLIENT must read the networked fire mode
-	-- and update Primary.Automatic to prevent the engine from calling PrimaryAttack
-	-- continuously in semi/burst modes (which would cause full-auto behavior)
+	-- Sync CLIENT Primary.Automatic with SERVER fire mode
 	if CLIENT and self.FireModes then
 		local networkedMode = self.Weapon:GetNWInt("CurrentFireMode", 0)
 		if networkedMode > 0 and self.FireModes[networkedMode] then
@@ -2267,9 +1807,7 @@ function SWEP:Think()
 		end
 	end
 
-	-- MP CLIENT: Enforce networked hold type for all clients
-	-- SetHoldType is realm-local, so non-owning clients must apply the hold type
-	-- from the SERVER-networked variable to get correct third-person animations
+	-- Enforce networked hold type on all clients
 	if CLIENT and self.GetM9KRHoldType then
 		local networkedHoldType = self:GetM9KRHoldType()
 		if networkedHoldType and networkedHoldType ~= "" and networkedHoldType ~= self.HoldType then
@@ -2277,9 +1815,7 @@ function SWEP:Think()
 		end
 	end
 
-	-- MP CLIENT: Third-person muzzle flash for non-owning players
-	-- SERVER increments M9KRShotsFired on each shot; we detect the change and create
-	-- the muzzle flash effect locally for third-person rendering
+	-- Third-person muzzle flash for non-owning players
 	if CLIENT and not game.SinglePlayer() then
 		local owner = self:GetOwner()
 		if IsValid(owner) and owner:IsPlayer() and owner ~= LocalPlayer() then
@@ -2310,32 +1846,26 @@ function SWEP:Think()
 		end
 	end
 
-	-- Burst fire: process queued shots via CurTime check (prediction-safe, unlike timers)
+	-- Process burst fire
 	if self.BurstShotsRemaining and self.BurstShotsRemaining > 0 and self.NextBurstShotTime and CurTime() >= self.NextBurstShotTime then
 		self:FireBurstShot()
 	end
 
-	-- Store viewmodel reference for muzzle flash effects (TFA Base approach)
+	-- Store viewmodel reference
 	if CLIENT and IsValid(self.Owner) and self.Owner == LocalPlayer() then
 		self.OwnerViewModel = self.Owner:GetViewModel()
 
-		-- Update weapon input state (ADS, sprint, safety, reload, FOV transitions)
-		-- Safe to call multiple times per frame (uses CurTime-based transitions, not deltas)
 		self:UpdateWeaponInputState()
 
-		-- Guard FrameTime-based updates against multiple calls per frame
-		-- In multiplayer, Think() can run multiple times per frame during prediction,
-		-- which would double-advance FrameTime-accumulated values
+		-- Guard against prediction double-advance
 		local curFrame = FrameNumber()
 		if self.m9kr_LastProgressFrame ~= curFrame then
 			self.m9kr_LastProgressFrame = curFrame
 
-			-- Update progress values (TFA-style approach - lightweight float lerp only, no heavy logic)
 			self:UpdateProgressRatios()
 		end
 
-		-- SP low ammo detection: in SP, PrimaryAttack runs on SERVER only,
-		-- so CLIENT detects ammo decrease to trigger low ammo sounds
+		-- SP: detect ammo decrease for low ammo sounds
 		if game.SinglePlayer() and self.CheckLowAmmo then
 			local currentClip = self:Clip1()
 			if self.m9kr_LastClipForLowAmmo and currentClip < self.m9kr_LastClipForLowAmmo then
@@ -2345,12 +1875,11 @@ function SWEP:Think()
 			self.m9kr_LastClipForLowAmmo = currentClip
 		end
 
-		-- Belt-fed weapon display update (bone/bodygroup belt depletion + reload animation)
+		-- Belt-fed display update
 		self:UpdateBeltAmmo()
 	end
 
-	-- TFA-Style Recoil Decay System
-	-- Guard against double-advancement on CLIENT during prediction
+	-- Recoil decay
 	local ft = FrameTime()
 	local shouldDecayRecoil = true
 	if CLIENT then
@@ -2361,7 +1890,6 @@ function SWEP:Think()
 		self.m9kr_LastDecayFrame = curFrame
 	end
 
-	-- Smoothly update IronSights progress for recoil interpolation
 	local isInADS = CLIENT and (self.m9kr_IsInADS or false) or false
 	local targetProgress = isInADS and 1.0 or 0.0
 	self.IronSightsProgressSmooth = self.IronSightsProgressSmooth or 0
@@ -2369,7 +1897,6 @@ function SWEP:Think()
 		self.IronSightsProgressSmooth = Lerp(ft * 8, self.IronSightsProgressSmooth, targetProgress)
 	end
 
-	-- Decay ViewPunch accumulator over time
 	if shouldDecayRecoil and self.ViewPunchP then
 		self.ViewPunchP = Lerp(ft * 5, self.ViewPunchP, 0)
 	end
@@ -2377,53 +1904,39 @@ function SWEP:Think()
 		self.ViewPunchY = Lerp(ft * 5, self.ViewPunchY, 0)
 	end
 
-	-- Suppressor attachment/detachment animation management
-	-- Check if suppressor animation should complete (backup to timer system)
+	-- Suppressor animation backup completion
 	if self.CanBeSilenced and (self:GetIsAttachingSuppressor() or self:GetIsDetachingSuppressor()) then
 		local animEndTime = self:GetSuppressorAnimEndTime()
 		if CurTime() >= animEndTime then
-			-- Animation complete - restore hold type and update world model
 			if self.OriginalHoldType then
 				self:M9KR_SetHoldType(self.OriginalHoldType)
 			end
 
-			-- Clear both animation flags
 			self:SetIsAttachingSuppressor(false)
 			self:SetIsDetachingSuppressor(false)
 
-			-- Update world model to show final state
 			self:UpdateWorldModel()
 		end
 	end
 
-	-- Sprint-Jump Detection System
-	-- Track ground state to detect when player jumps during sprint
+	-- Sprint-jump detection
 	local isOnGround = self.Owner:IsOnGround()
 	self.LastGroundState = self.LastGroundState or true
 
-	-- Detect jump event (was on ground, now in air)
 	if self.LastGroundState and not isOnGround then
-		-- Check if player is sprinting when they jump
 		if self:GetSprint() and self.Owner:KeyDown(IN_SPEED) then
 			self.SprintJumping = true
-			-- Note: We don't play jump animations because they interfere with weapon firing
-			-- The SprintJumping flag is sufficient for gameplay (allows shooting during sprint-jump)
 		else
 			self.SprintJumping = false
 		end
 	end
 
-	-- Clear sprint-jumping flag when landing
 	if isOnGround and not self.LastGroundState then
 		self.SprintJumping = false
 	end
 
-	-- Update ground state tracker
 	self.LastGroundState = isOnGround
 
-	-- ADS/Sprint state management is handled by UpdateWeaponInputState (CLIENT)
-
-	-- Safety hold type enforcement (runs on both CLIENT and SERVER)
 	self:UpdateSafetyHoldType()
 
 	self:IronSight()
@@ -2450,7 +1963,6 @@ local HIP_SPREAD = {
 }
 
 function SWEP:GetDynamicSpread()
-	-- Check ADS state on both CLIENT and SERVER
 	local isADS = false
 	if CLIENT then
 		isADS = (self.m9kr_IsInADS or false) and self.Owner:KeyDown(IN_ATTACK2)

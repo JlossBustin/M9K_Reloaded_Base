@@ -4,8 +4,8 @@ SWEP.Author = "Generic Default, Worshipper, Clavus, and Bob"
 SWEP.Contact = ""
 SWEP.Purpose = ""
 SWEP.Instructions = ""
-SWEP.MuzzleAttachment = "1" -- Should be "1" for CSS models or "muzzle" for hl2 models
-SWEP.ShellEjectAttachment = "2" -- Should be "2" for CSS models or "1" for hl2 models
+SWEP.MuzzleAttachment = "1"
+SWEP.ShellEjectAttachment = "2"
 SWEP.DrawCrosshair = true
 SWEP.ViewModelFOV = 65
 SWEP.ViewModelFlip = true
@@ -15,20 +15,20 @@ SWEP.Base = "carby_gun_base"
 SWEP.Spawnable = false
 SWEP.AdminSpawnable = false
 
-SWEP.Primary.Sound = Sound("") -- Sound of the gun
-SWEP.Primary.Round = ("") -- What kind of bullet?
-SWEP.Primary.RPM = 0 -- This is in Rounds Per Minute
-SWEP.Primary.Cone = 0.15 -- Accuracy of NPCs
+SWEP.Primary.Sound = Sound("")
+SWEP.Primary.Round = ("")
+SWEP.Primary.RPM = 0
+SWEP.Primary.Cone = 0.15
 SWEP.Primary.Recoil = 10
 SWEP.Primary.Damage = 10
-SWEP.Primary.Spread = .01 -- define from-the-hip accuracy 1 is terrible, .0001 is exact)
+SWEP.Primary.Spread = .01
 SWEP.Primary.NumShots = 1
-SWEP.Primary.ClipSize = 0 -- Size of a clip
-SWEP.Primary.DefaultClip = 0 -- Default number of bullets in a clip
-SWEP.Primary.KickUp = 0 -- Maximum up recoil (rise)
-SWEP.Primary.KickDown = 0 -- Maximum down recoil (skeet)
-SWEP.Primary.KickHorizontal = 0 -- Maximum up recoil (stock)
-SWEP.Primary.Ammo = "none" -- What kind of ammo
+SWEP.Primary.ClipSize = 0
+SWEP.Primary.DefaultClip = 0
+SWEP.Primary.KickUp = 0
+SWEP.Primary.KickDown = 0
+SWEP.Primary.KickHorizontal = 0
+SWEP.Primary.Ammo = "none"
 
 -- Chamber system variables (+1 reload mechanic)
 SWEP.HasChamber = true  -- Enables +1 in chamber for tactical reloads
@@ -37,8 +37,8 @@ SWEP.ChamberRound = false  -- Tracks if a round is chambered
 -- Fire mode selection cooldown timer
 SWEP.NextFireSelect = 0
 
--- SWEP.Secondary.ClipSize = 0 -- Size of a clip
--- SWEP.Secondary.DefaultClip = 0 -- Default number of bullets in a clip
+-- SWEP.Secondary.ClipSize = 0
+-- SWEP.Secondary.DefaultClip = 0
 SWEP.Secondary.Ammo = ""
 
 SWEP.Secondary.ScopeZoom = 0
@@ -154,14 +154,9 @@ function SWEP:Initialize()
 	util.PrecacheSound(self.Primary.Sound)
 	if CLIENT then
 	
-		-- We need to get these so we can scale everything to the player's current resolution.
 		local iScreenWidth = surface.ScreenWidth()
 		local iScreenHeight = surface.ScreenHeight()
 		
-		-- The following code is only slightly riped off from Night Eagle
-		-- These tables are used to draw things like scopes and crosshairs to the HUD.
-		-- so DONT GET RID OF IT!
-
 		self.ScopeTable = {}
 		self.ScopeTable.l = iScreenHeight*self.ScopeScale
 		self.ScopeTable.x1 = 0.5*(iScreenWidth + self.ScopeTable.l)
@@ -172,7 +167,7 @@ function SWEP:Initialize()
 		self.ScopeTable.y3 = self.ScopeTable.y2
 		self.ScopeTable.x4 = self.ScopeTable.x3
 		self.ScopeTable.y4 = self.ScopeTable.y1
-		self.ScopeTable.l = (iScreenHeight + 1)*self.ScopeScale -- I don't know why this works, but it does.
+		self.ScopeTable.l = (iScreenHeight + 1)*self.ScopeScale
 
 		self.QuadTable = {}
 		self.QuadTable.x1 = 0
@@ -200,7 +195,7 @@ function SWEP:Initialize()
 
 		self.ReticleTable = {}
 		self.ReticleTable.wdivider = 3.125
-		self.ReticleTable.hdivider = 1.7579/self.ReticleScale		-- Draws the texture at 512 when the resolution is 1600x900
+		self.ReticleTable.hdivider = 1.7579/self.ReticleScale
 		self.ReticleTable.x = (iScreenWidth/2)-((iScreenHeight/self.ReticleTable.hdivider)/2)
 		self.ReticleTable.y = (iScreenHeight/2)-((iScreenHeight/self.ReticleTable.hdivider)/2)
 		self.ReticleTable.w = iScreenHeight/self.ReticleTable.hdivider
@@ -226,39 +221,32 @@ function SWEP:Initialize()
 
 	if CLIENT then
 
-		-- // Create a new table for every weapon instance
 		self.VElements = table.FullCopy( self.VElements )
 		self.ViewModelBoneMods = table.FullCopy( self.ViewModelBoneMods )
 
-		-- CreateModels() removed - legacy code no longer needed
-		-- Viewmodel boneMods are handled by PreDrawViewModel hook
 
-		-- // init view model bone build function
 		if IsValid(self.Owner) and self.Owner:IsPlayer() then
 			if self.Owner:Alive() then
 				local vm = self.Owner:GetViewModel()
 				if IsValid(vm) then
 					self:ResetViewModelBones(vm)
-					-- // Init viewmodel visibility
-					if (self.ShowViewModel == nil or self.ShowViewModel) then
+						if (self.ShowViewModel == nil or self.ShowViewModel) then
 						vm:SetColor(Color(255,255,255,255))
 					else
-						-- // however for some reason the view model resets to render mode 0 every frame so we just apply a debug material to prevent it from drawing
-						vm:SetMaterial("Debug/hsv")			
+						-- View model resets to render mode 0 every frame, so apply a debug material to prevent it from drawing
+						vm:SetMaterial("Debug/hsv")
 					end
 				end
 			end
 		end
 	end
 
-	-- Defer expensive CLIENT operations to Deploy() for faster spawn
-
 end
 
 function SWEP:Deploy()
 	if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
-	self:SetIronsights(false, self.Owner) -- Set the ironsight false
-	self:SetSprint(false) -- Clear sprint state initially
+	self:SetIronsights(false, self.Owner)
+	self:SetSprint(false)
 	self:M9KR_SetHoldType(self.HoldType)
 	self.BurstShotsRemaining = nil
 	self.ContinuousShotCount = 0  -- Reset progressive spread counter (auto mode)
@@ -712,11 +700,9 @@ function SWEP:Reload()
 			end
 		end
 
-		-- FOV and viewmodel managed by UpdateWeaponInputState/CalcView
 		self:SetIronsights(false)
 		if CLIENT then return end
 
-		-- Handle the +1 ammo after animation completes
 		local waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
 		local reloadTimerName = "M9K_ScopedReload_" .. self:EntIndex()
 		timer.Create(reloadTimerName, waitdammit + 0.1, 1, function()
@@ -770,19 +756,11 @@ function SWEP:Reload()
 	end
 
 	if (self.Weapon:Clip1() < self.Primary.ClipSize) and not self.Owner:IsNPC() then
-		-- When the current clip < full clip and the rest of your ammo > 0, then
-
-		-- FOV and viewmodel managed by UpdateWeaponInputState/CalcView
-		-- Zoom = 0
-
 		self:SetIronsights(false)
-		-- Set the ironsight to false
 		self.Weapon:SetNWBool("Reloading", true)
 
-		-- Show reload animation to other players
 		self.Owner:SetAnimation(PLAYER_RELOAD)
 
-		-- Viewmodel automatically returns to normal position via GetViewModelPosition
 		if CLIENT then return end
 	end
 	
@@ -840,11 +818,9 @@ function SWEP:PostReloadScopeCheck()
 		end
 
 		if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
-			-- FOV and viewmodel managed by UpdateWeaponInputState/CalcView
-			-- Only handle SERVER-side game logic here
 			if SERVER then
-				self.IronSightsPos = self.SightsPos -- Bring it up
-				self.IronSightsAng = self.SightsAng -- Bring it up
+				self.IronSightsPos = self.SightsPos
+				self.IronSightsAng = self.SightsAng
 				if not self.ShowCrosshairInADS then
 					self.DrawCrosshair = false
 				end
@@ -853,12 +829,11 @@ function SWEP:PostReloadScopeCheck()
 		elseif self.Owner:KeyDown(IN_SPEED) and self.Owner:GetVelocity():Length2D() > 20 and self.Weapon:GetClass() == self.Gun then
 			-- Only enter sprint animation if player is actually moving
 			if self.Weapon:GetNextPrimaryFire() <= (CurTime()+0.3) then
-				self.Weapon:SetNextPrimaryFire(CurTime()+0.3) -- Make it so you can't shoot for another quarter second
+				self.Weapon:SetNextPrimaryFire(CurTime()+0.3)
 			end
-			self.IronSightsPos = self.RunSightsPos -- Hold it down
-			self.IronSightsAng = self.RunSightsAng -- Hold it down
+			self.IronSightsPos = self.RunSightsPos
+			self.IronSightsAng = self.RunSightsAng
 			self:SetIronsights(false, self.Owner)
-			-- FOV managed by UpdateWeaponInputState/CalcView
 
 			-- Delay sprint transition for smoother feel
 			-- Gun goes to idle first, then transitions to sprint after 0.35 seconds
@@ -1066,14 +1041,3 @@ function SWEP:IronSight()
 		end
 	end
 end
-
--- HUD drawing moved to lua/m9kr/client/m9kr_hud.lua
--- CustomAmmoDisplay is now centralized
-
--- GetScopeSway is in cl_init.lua
-
--- DrawHUD is in cl_init.lua
-
--- AdjustMouseSensitivity is in cl_init.lua
-
--- HUDShouldDraw is in cl_init.lua
