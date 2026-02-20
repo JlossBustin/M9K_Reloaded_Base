@@ -884,41 +884,18 @@ end
 
 function SWEP:M9KR_SpawnShellEject()
 	if self.NoShellEject then return end
-	if not CLIENT then return end
-	if not IsValid(self) or not IsValid(self.Owner) then return end
-	if self.Owner ~= LocalPlayer() then return end
-	if not self.ShellModel then return end
+	if CLIENT then
+		if not IsValid(self) or not IsValid(self.Owner) then return end
+		if self.Owner ~= LocalPlayer() then return end
+		if not self.ShellModel then return end
 
-	if not game.SinglePlayer() and not IsFirstTimePredicted() then return end
-	self.m9kr_PendingShellEject = true
-	self.m9kr_PendingShellEjectTime = CurTime()
+		if not game.SinglePlayer() and not IsFirstTimePredicted() then return end
+		self.m9kr_PendingShellEject = true
+		self.m9kr_PendingShellEjectTime = CurTime()
+	end
 end
 
-function SWEP:EjectShell()
-	if self.NoShellEject then return end
-	if not CLIENT then return end
-	if not IsValid(self) or not IsValid(self.Owner) then return end
-	if not self.ShellModel then return end
-
-	if self.Owner ~= LocalPlayer() then return end
-
-	local vm = self.Owner:GetViewModel()
-	if not IsValid(vm) then return end
-
-	-- Attachment priority: QC-cached > weapon property > default 2
-	local attachmentId = self._qcShellAttachment or tonumber(self.ShellEjectAttachment) or 2
-
-	local attachment = vm:GetAttachment(attachmentId)
-	if not attachment then return end
-
-	local effectData = EffectData()
-	effectData:SetOrigin(attachment.Pos)
-	effectData:SetNormal(attachment.Ang:Forward())
-	effectData:SetEntity(self)
-	effectData:SetAttachment(attachmentId)
-
-	util.Effect("m9kr_shell", effectData)
-end
+-- EjectShell() is defined in cl_init.lua (CLIENT-only viewmodel effect)
 
 function SWEP:FireAnimationEvent(pos, ang, event, options)
 	-- Block muzzle flash events: 21 (primary), 22 (secondary), 5001 (CS:S), 5011 (DoD:S), 5021 (TF2), 6001 (attachment)
@@ -1504,12 +1481,11 @@ function SWEP:PostReloadScopeCheck()
 		if self.Weapon == nil then return end
 		self.Weapon:SetNWBool("Reloading", false)
 		if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
-				if CLIENT then return end
-				if self.Scoped == false then
+				if SERVER and self.Scoped == false then
 						self:SetSprint(false)
 						self:SetIronsights(true, self.Owner)
 						self.DrawCrosshair = false
-				else return end
+				end
 		elseif self.Owner:KeyDown(IN_SPEED) and self.Owner:GetVelocity():Length2D() > 20 and self.Weapon:GetClass() == self.Gun then
 				-- Only enter sprint animation if player is actually moving
 				if self.Weapon:GetNextPrimaryFire() <= (CurTime() + .03) then
@@ -1517,7 +1493,7 @@ function SWEP:PostReloadScopeCheck()
 				end
 				self:SetIronsights(false)
 				self:SetSprint(true)
-		else return end
+		end
 end
  
 function SWEP:Silencer()
@@ -1580,8 +1556,7 @@ function SWEP:Silencer()
 
 		-- Handle player input after animation completes
 		if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
-			if CLIENT then return end
-			if self.Scoped == false then
+			if SERVER and self.Scoped == false then
 				self:SetSprint(false)
 				self:SetIronsights(true, self.Owner)
 				self.DrawCrosshair = false

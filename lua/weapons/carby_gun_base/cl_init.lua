@@ -677,8 +677,33 @@ function SWEP:CheckLowAmmo()
 	self.m9kr_LowAmmoWasLow = isLowAmmo
 end
 
+-- Viewmodel Shell Ejection (CLIENT-only: uses GetViewModel, LocalPlayer, util.Effect)
+function SWEP:EjectShell()
+	if self.NoShellEject then return end
+	if not IsValid(self) or not IsValid(self.Owner) then return end
+	if not self.ShellModel then return end
+
+	if self.Owner ~= LocalPlayer() then return end
+
+	local vm = self.Owner:GetViewModel()
+	if not IsValid(vm) then return end
+
+	-- Attachment priority: QC-cached > weapon property > default 2
+	local attachmentId = self._qcShellAttachment or tonumber(self.ShellEjectAttachment) or 2
+
+	local attachment = vm:GetAttachment(attachmentId)
+	if not attachment then return end
+
+	local effectData = EffectData()
+	effectData:SetOrigin(attachment.Pos)
+	effectData:SetNormal(attachment.Ang:Forward())
+	effectData:SetEntity(self)
+	effectData:SetAttachment(attachmentId)
+
+	util.Effect("m9kr_shell", effectData)
+end
+
 -- Worldmodel Shell Ejection
--- Viewmodel shells are handled by SWEP:EjectShell in shared.lua
 
 local ShellEjectionOffset = {
 	Forward = 5,

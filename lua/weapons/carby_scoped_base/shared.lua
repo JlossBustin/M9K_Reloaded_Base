@@ -541,50 +541,50 @@ function SWEP:BoltBack()
 	end
 
 	if self.Weapon:Clip1() > 0 or self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType()) > 0 then
-		if not SERVER then return end
+		if SERVER then
+			local entIndex = self:EntIndex()
 
-		local entIndex = self:EntIndex()
-
-		-- Additional safety check for valid entity index
-		if not entIndex or entIndex <= 0 then
-			return
-		end
-
-		if self.Weapon:GetClass() ~= self.Gun then return end
-
-		-- Get viewmodel and animation duration
-		local vm = self.Owner:GetViewModel()
-		if not IsValid(vm) then return end
-
-		local boltactiontime = vm:SequenceDuration()
-
-		-- Create timer to return to idle after bolt animation completes
-		-- NOTE: We do NOT set Reloading=true here - that flag is only for magazine reloads
-		-- Fire rate timing is already handled by SetNextPrimaryFire in gun_base
-		local boltCompleteTimerName = "M9K_ScopedBoltComplete_" .. entIndex
-		timer.Create(boltCompleteTimerName, boltactiontime, 1, function()
-			if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
-
-			-- Don't override reload animations - if weapon is reloading, let reload handle animations
-			if self.Weapon:GetNWBool("Reloading") then return end
-
-			-- Send weapon back to idle animation after bolt action completes
-			if self.Silenced then
-				self.Weapon:SendWeaponAnim(ACT_VM_IDLE_SILENCED)
-			else
-				self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
+			-- Additional safety check for valid entity index
+			if not entIndex or entIndex <= 0 then
+				return
 			end
 
-			-- If player is still in ADS, restore ironsights position
-			if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
-				self.IronSightsPos = self.SightsPos
-				self.IronSightsAng = self.SightsAng
-				if not self.ShowCrosshairInADS then
-					self.DrawCrosshair = false
+			if self.Weapon:GetClass() ~= self.Gun then return end
+
+			-- Get viewmodel and animation duration
+			local vm = self.Owner:GetViewModel()
+			if not IsValid(vm) then return end
+
+			local boltactiontime = vm:SequenceDuration()
+
+			-- Create timer to return to idle after bolt animation completes
+			-- NOTE: We do NOT set Reloading=true here - that flag is only for magazine reloads
+			-- Fire rate timing is already handled by SetNextPrimaryFire in gun_base
+			local boltCompleteTimerName = "M9K_ScopedBoltComplete_" .. entIndex
+			timer.Create(boltCompleteTimerName, boltactiontime, 1, function()
+				if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
+
+				-- Don't override reload animations - if weapon is reloading, let reload handle animations
+				if self.Weapon:GetNWBool("Reloading") then return end
+
+				-- Send weapon back to idle animation after bolt action completes
+				if self.Silenced then
+					self.Weapon:SendWeaponAnim(ACT_VM_IDLE_SILENCED)
+				else
+					self.Weapon:SendWeaponAnim(ACT_VM_IDLE)
 				end
-				self:SetIronsights(true, self.Owner)
-			end
-		end)
+
+				-- If player is still in ADS, restore ironsights position
+				if self.Owner:KeyDown(IN_ATTACK2) and self.Weapon:GetClass() == self.Gun then
+					self.IronSightsPos = self.SightsPos
+					self.IronSightsAng = self.SightsAng
+					if not self.ShowCrosshairInADS then
+						self.DrawCrosshair = false
+					end
+					self:SetIronsights(true, self.Owner)
+				end
+			end)
+		end
 	end
 end
 
@@ -702,24 +702,25 @@ function SWEP:Reload()
 		end
 
 		self:SetIronsights(false)
-		if CLIENT then return end
 
-		local waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
-		local reloadTimerName = "M9K_ScopedReload_" .. self:EntIndex()
-		timer.Create(reloadTimerName, waitdammit + 0.1, 1, function()
-			if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
-			
-			-- Add the +1 chamber round (skip for revolvers - no chamber)
-			local currentAmmo = self.Weapon:Clip1()
-			local reserve = self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType())
-			if reserve > 0 and currentAmmo == maxClip and not self.noChamber then
-				self.Weapon:SetClip1(maxClip + 1)
-				self.Owner:SetAmmo(reserve - 1, self.Weapon:GetPrimaryAmmoType())
-			end
-			
-			self:PostReloadScopeCheck()
-		end)
-		
+		if SERVER then
+			local waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
+			local reloadTimerName = "M9K_ScopedReload_" .. self:EntIndex()
+			timer.Create(reloadTimerName, waitdammit + 0.1, 1, function()
+				if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
+
+				-- Add the +1 chamber round (skip for revolvers - no chamber)
+				local currentAmmo = self.Weapon:Clip1()
+				local reserve = self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType())
+				if reserve > 0 and currentAmmo == maxClip and not self.noChamber then
+					self.Weapon:SetClip1(maxClip + 1)
+					self.Owner:SetAmmo(reserve - 1, self.Weapon:GetPrimaryAmmoType())
+				end
+
+				self:PostReloadScopeCheck()
+			end)
+		end
+
 		return
 	end
 	
@@ -761,45 +762,45 @@ function SWEP:Reload()
 		self.Weapon:SetNWBool("Reloading", true)
 
 		self.Owner:SetAnimation(PLAYER_RELOAD)
-
-		if CLIENT then return end
 	end
-	
-	local waitdammit
-	if self.Owner:GetViewModel() == nil then
-		waitdammit = 3
-	else
-		waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
-	end
-	
-	local reloadTimerName = "M9K_ScopedReload_" .. self:EntIndex()
-	timer.Create(reloadTimerName, waitdammit + .1, 1, function()
-		if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
-		
-		-- Chamber system: Handle all ammo distribution after reload animation completes
-		local currentClip = self.Weapon:Clip1()
-		local maxClip = self.Primary.ClipSize
-		local reserveAmmo = self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType())
-		
-		-- Calculate how much ammo we need
-		local ammoNeeded = maxClip - currentClip
 
-		-- Add chamber round for tactical reloads (skip for revolvers)
-		if self.HasChamber and self.ChamberRound and not self.noChamber then
-			ammoNeeded = ammoNeeded + 1  -- Need one extra for chamber
+	if SERVER then
+		local waitdammit
+		if self.Owner:GetViewModel() == nil then
+			waitdammit = 3
+		else
+			waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
 		end
-		
-		-- Take from reserve and fill magazine + chamber simultaneously
-		if reserveAmmo > 0 and ammoNeeded > 0 then
-			local ammoToTake = math.min(ammoNeeded, reserveAmmo)
-			local newClip = currentClip + ammoToTake
-			
-			self.Weapon:SetClip1(newClip)
-			self.Owner:SetAmmo(reserveAmmo - ammoToTake, self.Weapon:GetPrimaryAmmoType())
-		end
-		
-		self:PostReloadScopeCheck()
-	end)
+
+		local reloadTimerName = "M9K_ScopedReload_" .. self:EntIndex()
+		timer.Create(reloadTimerName, waitdammit + .1, 1, function()
+			if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
+
+			-- Chamber system: Handle all ammo distribution after reload animation completes
+			local currentClip = self.Weapon:Clip1()
+			local maxClip = self.Primary.ClipSize
+			local reserveAmmo = self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType())
+
+			-- Calculate how much ammo we need
+			local ammoNeeded = maxClip - currentClip
+
+			-- Add chamber round for tactical reloads (skip for revolvers)
+			if self.HasChamber and self.ChamberRound and not self.noChamber then
+				ammoNeeded = ammoNeeded + 1  -- Need one extra for chamber
+			end
+
+			-- Take from reserve and fill magazine + chamber simultaneously
+			if reserveAmmo > 0 and ammoNeeded > 0 then
+				local ammoToTake = math.min(ammoNeeded, reserveAmmo)
+				local newClip = currentClip + ammoToTake
+
+				self.Weapon:SetClip1(newClip)
+				self.Owner:SetAmmo(reserveAmmo - ammoToTake, self.Weapon:GetPrimaryAmmoType())
+			end
+
+			self:PostReloadScopeCheck()
+		end)
+	end
 end
 
 function SWEP:PostReloadScopeCheck()
