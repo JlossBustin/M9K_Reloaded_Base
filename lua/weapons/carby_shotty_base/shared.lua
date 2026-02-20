@@ -90,7 +90,8 @@ end
 function SWEP:Initialize()
 	-- Base class initialization (copied from carby_gun_base to fix inheritance)
 	self.Reloadaftershoot = 0
-	self:SetHoldType(self.HoldType)
+	self.OriginalHoldType = self.HoldType or "ar2"
+	self:M9KR_SetHoldType(self.HoldType)
 	self.OrigCrossHair = self.DrawCrosshair
 
 	-- Initialize chamber state
@@ -819,7 +820,7 @@ function SWEP:Think()
 		if CurTime() >= animEndTime then
 			-- Animation complete - restore hold type and update world model
 			if self.OriginalHoldType then
-				self:SetHoldType(self.OriginalHoldType)
+				self:M9KR_SetHoldType(self.OriginalHoldType)
 			end
 
 			-- Clear both animation flags
@@ -1095,7 +1096,7 @@ function SWEP:Deploy()
 	self.LastShotTime = 0
 	self.LastTriggerState = false
 
-	self:SetHoldType(self.HoldType)
+	self:M9KR_SetHoldType(self.HoldType)
 
 	local timerName = "ShotgunReload_" ..  self.Owner:UniqueID()
 	if (timer.Exists(timerName)) then

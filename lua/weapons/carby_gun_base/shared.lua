@@ -223,6 +223,14 @@ function SWEP:SetupDataTables()
 
 	-- Network safety state so other players can see the weapon is on safe
 	self:NetworkVar("Bool", 3, "IsOnSafe") -- TRUE when weapon safety is engaged
+
+	-- Shot counter for MP third-person muzzle flash synchronization
+	-- SERVER increments on each shot; non-owning clients detect changes in Think
+	self:NetworkVar("Int", 0, "M9KRShotsFired")
+
+	-- Networked hold type for MP third-person player model animations
+	-- SetHoldType is realm-local, so we network the string for all clients to apply
+	self:NetworkVar("String", 0, "M9KRHoldType")
 end
 
 --[[
@@ -275,7 +283,8 @@ end
 
 function SWEP:Initialize()
 	self.Reloadaftershoot = 0 -- Can't reload when firing
-	self:SetHoldType(self.HoldType)
+	self.OriginalHoldType = self.HoldType or "ar2"
+	self:M9KR_SetHoldType(self.HoldType)
 	self.OrigCrossHair = self.DrawCrosshair
 
 	-- Initialize chamber state
@@ -386,13 +395,13 @@ end
 
 
 function SWEP:Equip()
-		self:SetHoldType(self.HoldType)
+	self:M9KR_SetHoldType(self.HoldType)
 end
 
 function SWEP:Deploy()
 	self:SetIronsights(false, self.Owner) -- Set the ironsight false
 	self:SetSprint(false) -- Clear sprint state initially
-	self:SetHoldType(self.HoldType)
+	self:M9KR_SetHoldType(self.HoldType)
 	self.BurstShotsRemaining = nil
 	self.ContinuousShotCount = 0  -- Reset progressive spread counter (auto mode)
 	self.RapidFireHeat = 0  -- Reset rapid fire heat (semi/burst spam)
@@ -990,7 +999,27 @@ end
 	(FireAnimationEvent or PostDrawViewModel) when positions are accurate.
 	In singleplayer, SERVER creates effects immediately (CLIENT prediction may not run
 	weapon attack functions in SP mode).
+
+	MP Third-Person Muzzle Flash:
+	SERVER increments the M9KRShotsFired NetworkVar on each shot. Non-owning clients
+	detect the change in Think() and create the muzzle flash effect locally. This avoids
+	prediction suppression issues with util.Effect from predicted hooks.
+
+	MP HoldType Synchronization:
+	SetHoldType is realm-local (not networked). M9KR_SetHoldType wraps it to also
+	update the M9KRHoldType NetworkVar on SERVER. All clients enforce the networked
+	holdtype in Think(), ensuring correct third-person player model animations.
 ]]
+
+-- Wrapper for SetHoldType that also networks the hold type to all clients
+-- SetHoldType only affects the calling realm; this ensures non-owning clients
+-- see correct third-person player model animations (ar2, pistol, shotgun, etc.)
+function SWEP:M9KR_SetHoldType(holdType)
+	self:SetHoldType(holdType)
+	if SERVER and self.SetM9KRHoldType then
+		self:SetM9KRHoldType(holdType)
+	end
+end
 
 function SWEP:M9KR_SpawnMuzzleFlash()
 	local mfCvar = GetConVar("M9KR_MuzzleFlash")
@@ -1004,26 +1033,28 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
 	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
 
-	local fx = EffectData()
-	fx:SetEntity(self.Weapon)
-	fx:SetOrigin(self.Owner:GetShootPos())
-	fx:SetNormal(self.Owner:GetAimVector())
-	fx:SetAttachment(self.MuzzleAttachment)
-
-	-- SERVER: broadcast muzzle flash effect to all clients
-	-- In SP, this is the only path (CLIENT prediction may not run weapon attack functions)
-	-- In MP, this sends the effect to all clients for third-person world model flashes
-	-- The effect code auto-detects first vs third person and uses viewmodel or world model accordingly
-	if SERVER then
+	-- SP SERVER: create effects immediately (engine sends to single client)
+	if game.SinglePlayer() and SERVER then
+		local fx = EffectData()
+		fx:SetEntity(self)
+		fx:SetOrigin(self.Owner:GetShootPos())
+		fx:SetNormal(self.Owner:GetAimVector())
+		fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
 		util.Effect(effectName, fx)
 		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx) end
+		return
 	end
 
-	-- CLIENT: queue deferred viewmodel flash for local player (accurate attachment positions at render time)
-	-- In MP, the server broadcast above handles third-person flashes for other players
-	-- For the local player, the deferred system creates the viewmodel flash during FireAnimationEvent
-	-- with bone-accurate positioning. The server broadcast also arrives but the effect uses
-	-- PATTACH_POINT_FOLLOW so both track correctly — the deferred one has priority via QC event timing.
+	-- MP SERVER: increment shot counter NetworkVar
+	-- Non-owning clients detect this change in Think() and create third-person effects
+	if SERVER then
+		local count = self:GetM9KRShotsFired() or 0
+		self:SetM9KRShotsFired(count + 1)
+	end
+
+	-- MP CLIENT (owning player): queue deferred viewmodel flash
+	-- Attachment positions are unreliable during prediction; the deferred system creates
+	-- the flash during FireAnimationEvent/PostDrawViewModel when bones are set up
 	if CLIENT then
 		if not IsFirstTimePredicted() then return end
 		self.m9kr_PendingMuzzleFlash = {name = effectName, smoke = doSmoke, time = CurTime()}
@@ -1833,7 +1864,7 @@ function SWEP:Silencer()
 	local isAttaching = not self.Silenced
 
 	-- STEP 1: Change hold type to PASSIVE (lowers gun)
-	self:SetHoldType("passive")
+	self:M9KR_SetHoldType("passive")
 
 	-- STEP 2: Play attachment/detachment animation and set animation flags
 	if isAttaching then
@@ -1880,7 +1911,7 @@ function SWEP:Silencer()
 		if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
 		-- Animation complete - restore hold type (gun comes back up)
-		self:SetHoldType(self.OriginalHoldType or self.HoldType)
+		self:M9KR_SetHoldType(self.OriginalHoldType or self.HoldType)
 
 		-- Clear animation flags
 		self:SetIsAttachingSuppressor(false)
@@ -2163,8 +2194,8 @@ end
 
 --[[
 	UpdateSafetyHoldType - Enforce hold type based on safety state
-	Runs on BOTH client and server. SetHoldType is networked, so server
-	changes are visible to all clients automatically.
+	Runs on BOTH client and server. M9KR_SetHoldType networks the hold type
+	via NetworkVar, so server changes are visible to all clients in Think.
 	Replaces the former global CLIENT Think hook (safety handler)
 ]]--
 function SWEP:UpdateSafetyHoldType()
@@ -2180,13 +2211,13 @@ function SWEP:UpdateSafetyHoldType()
 			safeHoldType = "normal"
 		end
 		if self.HoldType ~= safeHoldType then
-			self:SetHoldType(safeHoldType)
+			self:M9KR_SetHoldType(safeHoldType)
 		end
 	else
 		-- Safety off: restore original hold type
 		local targetHoldType = self.OriginalHoldType or "ar2"
 		if self.HoldType ~= targetHoldType then
-			self:SetHoldType(targetHoldType)
+			self:M9KR_SetHoldType(targetHoldType)
 		end
 	end
 
@@ -2233,6 +2264,49 @@ function SWEP:Think()
 		local networkedMode = self.Weapon:GetNWInt("CurrentFireMode", 0)
 		if networkedMode > 0 and self.FireModes[networkedMode] then
 			self.Primary.Automatic = (self.FireModes[networkedMode] == "auto")
+		end
+	end
+
+	-- MP CLIENT: Enforce networked hold type for all clients
+	-- SetHoldType is realm-local, so non-owning clients must apply the hold type
+	-- from the SERVER-networked variable to get correct third-person animations
+	if CLIENT and self.GetM9KRHoldType then
+		local networkedHoldType = self:GetM9KRHoldType()
+		if networkedHoldType and networkedHoldType ~= "" and networkedHoldType ~= self.HoldType then
+			self:SetHoldType(networkedHoldType)
+		end
+	end
+
+	-- MP CLIENT: Third-person muzzle flash for non-owning players
+	-- SERVER increments M9KRShotsFired on each shot; we detect the change and create
+	-- the muzzle flash effect locally for third-person rendering
+	if CLIENT and not game.SinglePlayer() then
+		local owner = self:GetOwner()
+		if IsValid(owner) and owner:IsPlayer() and owner ~= LocalPlayer() then
+			local shotsFired = self:GetM9KRShotsFired() or 0
+			if shotsFired ~= (self.m9kr_LastShotsFired or 0) then
+				self.m9kr_LastShotsFired = shotsFired
+
+				local mfCvar = GetConVar("M9KR_MuzzleFlash")
+				if mfCvar and mfCvar:GetBool() then
+					local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
+					if self.Silenced and self.MuzzleFlashEffectSilenced then
+						effectName = self.MuzzleFlashEffectSilenced
+					end
+
+					local fx = EffectData()
+					fx:SetEntity(self)
+					fx:SetOrigin(owner:GetShootPos())
+					fx:SetNormal(owner:GetAimVector())
+					fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
+					util.Effect(effectName, fx)
+
+					local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
+					if smokeCvar and smokeCvar:GetInt() == 1 then
+						util.Effect("m9kr_muzzlesmoke", fx)
+					end
+				end
+			end
 		end
 	end
 
@@ -2310,7 +2384,7 @@ function SWEP:Think()
 		if CurTime() >= animEndTime then
 			-- Animation complete - restore hold type and update world model
 			if self.OriginalHoldType then
-				self:SetHoldType(self.OriginalHoldType)
+				self:M9KR_SetHoldType(self.OriginalHoldType)
 			end
 
 			-- Clear both animation flags

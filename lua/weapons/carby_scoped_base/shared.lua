@@ -110,7 +110,8 @@ end
 
 function SWEP:Initialize()
 	if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
-	self:SetHoldType(self.HoldType)
+	self.OriginalHoldType = self.HoldType or "ar2"
+	self:M9KR_SetHoldType(self.HoldType)
 	
 	-- Set dynamic ReticleScale based on optic type
 	self.ReticleScale = self:GetOptimalReticleScale()
@@ -221,8 +222,8 @@ function SWEP:Initialize()
 		self:SetNPCFireRate(1)
 		--self:SetCurrentWeaponProficiency( WEAPON_PROFICIENCY_VERY_GOOD )
 	end
-	self:SetHoldType(self.HoldType)
-	
+	self:M9KR_SetHoldType(self.HoldType)
+
 	if CLIENT then
 
 		-- // Create a new table for every weapon instance
@@ -258,7 +259,7 @@ function SWEP:Deploy()
 	if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 	self:SetIronsights(false, self.Owner) -- Set the ironsight false
 	self:SetSprint(false) -- Clear sprint state initially
-	self:SetHoldType(self.HoldType)
+	self:M9KR_SetHoldType(self.HoldType)
 	self.BurstShotsRemaining = nil
 	self.ContinuousShotCount = 0  -- Reset progressive spread counter (auto mode)
 	self.RapidFireHeat = 0  -- Reset rapid fire heat (semi/burst spam)

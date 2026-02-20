@@ -39,8 +39,6 @@ function EFFECT:Init(data)
 			self.WeaponEnt = owent:GetActiveWeapon()
 			if not IsValid(self.WeaponEnt) then return end
 		else
-			-- Skip server-broadcast flash for local player when deferred system will handle it
-			if IsValid(self.WeaponEntOG) and self.WeaponEntOG.m9kr_PendingMuzzleFlash then return end
 
 			self.WeaponEnt = owent:GetViewModel()
 
