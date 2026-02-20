@@ -1004,16 +1004,27 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
 	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
 
+	local fx = EffectData()
+	fx:SetEntity(self.Weapon)
+	fx:SetOrigin(self.Owner:GetShootPos())
+	fx:SetNormal(self.Owner:GetAimVector())
+	fx:SetAttachment(self.MuzzleAttachment)
+
 	-- SP SERVER: create effects immediately (engine sends to client)
 	if game.SinglePlayer() and SERVER then
-		local fx = EffectData()
-		fx:SetEntity(self.Weapon)
-		fx:SetOrigin(self.Owner:GetShootPos())
-		fx:SetNormal(self.Owner:GetAimVector())
-		fx:SetAttachment(self.MuzzleAttachment)
 		util.Effect(effectName, fx)
 		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx) end
 		return
+	end
+
+	-- MP SERVER: broadcast third-person muzzle flash to all other clients
+	-- The weapon owner handles their own viewmodel flash via the deferred client path below
+	if SERVER then
+		local filter = RecipientFilter()
+		filter:AddAllPlayers()
+		filter:RemovePlayer(self.Owner)
+		util.Effect(effectName, fx, true, filter)
+		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx, true, filter) end
 	end
 
 	-- MP CLIENT: queue for render time (attachment positions unreliable during prediction)
