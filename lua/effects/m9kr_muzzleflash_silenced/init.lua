@@ -39,6 +39,8 @@ function EFFECT:Init(data)
 			self.WeaponEnt = owent:GetActiveWeapon()
 			if not IsValid(self.WeaponEnt) then return end
 		else
+			-- Skip server-broadcast flash for local player when deferred system will handle it
+			if IsValid(self.WeaponEntOG) and self.WeaponEntOG.m9kr_PendingMuzzleFlash then return end
 			self.WeaponEnt = owent:GetViewModel()
 
 			local theirweapon = owent:GetActiveWeapon()
@@ -163,6 +165,8 @@ function EFFECT:Init(data)
 		if smokeEnabled then
 			ParticleEffect("muzzleflash_suppressed", self.vOffset, self.Dir:Angle())
 		else
+			-- Skip server-broadcast flash for local player when deferred system will handle it
+			if IsValid(self.WeaponEntOG) and self.WeaponEntOG.m9kr_PendingMuzzleFlash then return end
 			ParticleEffect("muzzleflash_suppressed_optimized", self.vOffset, self.Dir:Angle())
 		end
 	else
@@ -170,6 +174,8 @@ function EFFECT:Init(data)
 		if smokeEnabled then
 			ParticleEffectAttach("muzzleflash_suppressed", PATTACH_POINT_FOLLOW, self.WeaponEnt, self.Attachment)
 		else
+			-- Skip server-broadcast flash for local player when deferred system will handle it
+			if IsValid(self.WeaponEntOG) and self.WeaponEntOG.m9kr_PendingMuzzleFlash then return end
 			ParticleEffectAttach("muzzleflash_suppressed_optimized", PATTACH_POINT_FOLLOW, self.WeaponEnt, self.Attachment)
 		end
 	end
@@ -213,6 +219,8 @@ function EFFECT:Init(data)
 		if IsValid(self.WeaponEnt) then
 			dlight = DynamicLight(self.WeaponEnt:EntIndex())
 		else
+			-- Skip server-broadcast flash for local player when deferred system will handle it
+			if IsValid(self.WeaponEntOG) and self.WeaponEntOG.m9kr_PendingMuzzleFlash then return end
 			dlight = DynamicLight(0)
 		end
 

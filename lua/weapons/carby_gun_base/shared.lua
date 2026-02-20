@@ -1010,24 +1010,20 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	fx:SetNormal(self.Owner:GetAimVector())
 	fx:SetAttachment(self.MuzzleAttachment)
 
-	-- SP SERVER: create effects immediately (engine sends to client)
-	if game.SinglePlayer() and SERVER then
+	-- SERVER: broadcast muzzle flash effect to all clients
+	-- In SP, this is the only path (CLIENT prediction may not run weapon attack functions)
+	-- In MP, this sends the effect to all clients for third-person world model flashes
+	-- The effect code auto-detects first vs third person and uses viewmodel or world model accordingly
+	if SERVER then
 		util.Effect(effectName, fx)
 		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx) end
-		return
 	end
 
-	-- MP SERVER: broadcast third-person muzzle flash to all other clients
-	-- The weapon owner handles their own viewmodel flash via the deferred client path below
-	if SERVER then
-		local filter = RecipientFilter()
-		filter:AddAllPlayers()
-		filter:RemovePlayer(self.Owner)
-		util.Effect(effectName, fx, true, filter)
-		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx, true, filter) end
-	end
-
-	-- MP CLIENT: queue for render time (attachment positions unreliable during prediction)
+	-- CLIENT: queue deferred viewmodel flash for local player (accurate attachment positions at render time)
+	-- In MP, the server broadcast above handles third-person flashes for other players
+	-- For the local player, the deferred system creates the viewmodel flash during FireAnimationEvent
+	-- with bone-accurate positioning. The server broadcast also arrives but the effect uses
+	-- PATTACH_POINT_FOLLOW so both track correctly — the deferred one has priority via QC event timing.
 	if CLIENT then
 		if not IsFirstTimePredicted() then return end
 		self.m9kr_PendingMuzzleFlash = {name = effectName, smoke = doSmoke, time = CurTime()}
