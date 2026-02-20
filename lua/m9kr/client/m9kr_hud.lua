@@ -1,18 +1,27 @@
 --[[
 	M9K Reloaded - Client-Side HUD System
 
-	Centralized HUD drawing for M9K weapons:
-	- Weapon name (PrintName)
+	Configurable HUD replacement for M9K weapons (m9kr_hud_mode 0-4):
+
+	Weapon HUD (modes 1-4):
 	- Fire mode indicator (SAFE / AUTO / SEMI / BURST)
-	- Caliber (from ShellModel)
+	- Weapon name (PrintName) and caliber (from ShellModel)
 	- Magazine capacity + chamber (+1)
 	- Reserve ammo (DefaultClip)
 
-	This completely replaces GMod's default ammo display.
+	Health & Armor (modes 3, 4):
+	- Health with color gradient (green -> red)
+	- Armor display (when armor > 0)
+
+	Squad Indicator (modes 2, 4):
+	- Follower count by NPC type with icons
+
+	All elements fade to lower opacity after 3 seconds of inactivity.
+	Only active when holding an M9K weapon; default GMod HUD shows otherwise.
 ]]--
 
 -- ConVar to toggle between custom HUD and standard GMod HUD
-CreateClientConVar("m9kr_hud_mode", "1", true, false, "M9K:R HUD Mode: 0 = GMod Default, 1 = Custom M9K:R HUD", 0, 1)
+CreateClientConVar("m9kr_hud_mode", "4", true, false, "M9K:R HUD Mode: 0 = GMod Default, 1 = Weapon HUD, 2 = Weapon + Squad, 3 = Weapon + Health/Armor, 4 = Full HUD", 0, 4)
 
 -- Create custom fonts for HUD elements
 surface.CreateFont("M9KR_AmmoLarge", {
@@ -231,8 +240,9 @@ end
 	HUDPaint hook - Draw complete custom HUD
 ]]--
 hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
-	-- Check if custom HUD is enabled
-	if GetConVar("m9kr_hud_mode"):GetInt() == 0 then return end
+	-- Check HUD mode
+	local hudMode = GetConVar("m9kr_hud_mode"):GetInt()
+	if hudMode == 0 then return end
 
 	local ply = LocalPlayer()
 	if not IsValid(ply) or not ply:Alive() then return end
@@ -386,186 +396,191 @@ hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
 	draw.SimpleText(reserve, "M9KR_Reserve", reserveX, reserveY,
 		whiteFaded, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
 
-	-- 8. Health (bottom-left corner, matching ammo styling)
-	local health = ply:Health()
-	local maxHealth = ply:GetMaxHealth()
+	-- 8-9. Health & Armor (modes 3 and 4 only)
+	if hudMode == 3 or hudMode == 4 then
+		-- 8. Health (bottom-left corner, matching ammo styling)
+		local health = ply:Health()
+		local maxHealth = ply:GetMaxHealth()
 
-	-- Calculate health color gradient with better color transitions:
-	-- 100% - 75%: Green -> Light Green
-	-- 75% - 50%: Light Green -> Yellow
-	-- 50% - 25%: Yellow -> Orange
-	-- 25% - 0%: Orange -> Red
-	local healthFrac = math.Clamp(health / maxHealth, 0, 1)
-	local healthColor
+		-- Calculate health color gradient with better color transitions:
+		-- 100% - 75%: Green -> Light Green
+		-- 75% - 50%: Light Green -> Yellow
+		-- 50% - 25%: Yellow -> Orange
+		-- 25% - 0%: Orange -> Red
+		local healthFrac = math.Clamp(health / maxHealth, 0, 1)
+		local healthColor
 
-	if healthFrac > 0.75 then
-		-- Green to light green (100% to 75%)
-		local t = (healthFrac - 0.75) / 0.25
-		healthColor = Color(Lerp(t, 150, 100), 255, Lerp(t, 150, 100), alpha)
-	elseif healthFrac > 0.5 then
-		-- Light green to yellow (75% to 50%)
-		local t = (healthFrac - 0.5) / 0.25
-		healthColor = Color(Lerp(t, 255, 150), 255, Lerp(t, 0, 150), alpha)
-	elseif healthFrac > 0.25 then
-		-- Yellow to orange (50% to 25%)
-		local t = (healthFrac - 0.25) / 0.25
-		healthColor = Color(255, Lerp(t, 150, 255), 0, alpha)
-	else
-		-- Orange to red (25% to 0%)
-		local t = healthFrac / 0.25
-		healthColor = Color(255, Lerp(t, 0, 150), 0, alpha)
-	end
-
-	-- Draw health value (reduced font size, centered to handle variable digit counts)
-	local healthStr = tostring(health)
-	surface.SetFont("M9KR_Health")
-	local healthWidth = surface.GetTextSize(healthStr)
-	local healthCenterX = healthX - (healthWidth / 2)
-
-	draw.SimpleText(healthStr, "M9KR_Health", healthCenterX, healthY,
-		healthColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
-
-	-- Draw "HEALTH" label (faded white, centered under the number)
-	draw.SimpleText("HEALTH", "M9KR_HealthLabel", healthCenterX, healthLabelY,
-		whiteFaded, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
-
-	-- 9. Armor (right side, matching health styling)
-	local armor = ply:Armor()
-
-	-- Only display armor if player has any
-	if armor > 0 then
-		-- Calculate armor color gradient (blue/cyan tones for armor):
-		-- 100% - 75%: Bright cyan
-		-- 75% - 50%: Cyan to light blue
-		-- 50% - 25%: Light blue to blue
-		-- 25% - 0%: Blue to dark blue
-		local armorFrac = math.Clamp(armor / 100, 0, 1)  -- Assume max armor is 100
-		local armorColor
-
-		if armorFrac > 0.75 then
-			-- Bright cyan (100% to 75%)
-			local t = (armorFrac - 0.75) / 0.25
-			armorColor = Color(Lerp(t, 150, 100), Lerp(t, 255, 255), 255, alpha)
-		elseif armorFrac > 0.5 then
-			-- Cyan to light blue (75% to 50%)
-			local t = (armorFrac - 0.5) / 0.25
-			armorColor = Color(Lerp(t, 200, 150), Lerp(t, 220, 255), 255, alpha)
-		elseif armorFrac > 0.25 then
-			-- Light blue to blue (50% to 25%)
-			local t = (armorFrac - 0.25) / 0.25
-			armorColor = Color(Lerp(t, 220, 200), Lerp(t, 200, 220), 255, alpha)
+		if healthFrac > 0.75 then
+			-- Green to light green (100% to 75%)
+			local t = (healthFrac - 0.75) / 0.25
+			healthColor = Color(Lerp(t, 150, 100), 255, Lerp(t, 150, 100), alpha)
+		elseif healthFrac > 0.5 then
+			-- Light green to yellow (75% to 50%)
+			local t = (healthFrac - 0.5) / 0.25
+			healthColor = Color(Lerp(t, 255, 150), 255, Lerp(t, 0, 150), alpha)
+		elseif healthFrac > 0.25 then
+			-- Yellow to orange (50% to 25%)
+			local t = (healthFrac - 0.25) / 0.25
+			healthColor = Color(255, Lerp(t, 150, 255), 0, alpha)
 		else
-			-- Blue to darker blue (25% to 0%)
-			local t = armorFrac / 0.25
-			armorColor = Color(Lerp(t, 100, 220), Lerp(t, 150, 200), 255, alpha)
+			-- Orange to red (25% to 0%)
+			local t = healthFrac / 0.25
+			healthColor = Color(255, Lerp(t, 0, 150), 0, alpha)
 		end
 
-		-- Draw armor value (centered to handle variable digit counts)
-		local armorStr = tostring(armor)
-		surface.SetFont("M9KR_Armor")
-		local armorWidth = surface.GetTextSize(armorStr)
-		local armorCenterX = armorX - (armorWidth / 2)
+		-- Draw health value (reduced font size, centered to handle variable digit counts)
+		local healthStr = tostring(health)
+		surface.SetFont("M9KR_Health")
+		local healthWidth = surface.GetTextSize(healthStr)
+		local healthCenterX = healthX - (healthWidth / 2)
 
-		draw.SimpleText(armorStr, "M9KR_Armor", armorCenterX, armorY,
-			armorColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+		draw.SimpleText(healthStr, "M9KR_Health", healthCenterX, healthY,
+			healthColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
 
-		-- Draw "ARMOR" label (faded white, centered under the number)
-		draw.SimpleText("ARMOR", "M9KR_ArmorLabel", armorCenterX, armorLabelY,
+		-- Draw "HEALTH" label (faded white, centered under the number)
+		draw.SimpleText("HEALTH", "M9KR_HealthLabel", healthCenterX, healthLabelY,
 			whiteFaded, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+
+		-- 9. Armor (right side, matching health styling)
+		local armor = ply:Armor()
+
+		-- Only display armor if player has any
+		if armor > 0 then
+			-- Calculate armor color gradient (blue/cyan tones for armor):
+			-- 100% - 75%: Bright cyan
+			-- 75% - 50%: Cyan to light blue
+			-- 50% - 25%: Light blue to blue
+			-- 25% - 0%: Blue to dark blue
+			local armorFrac = math.Clamp(armor / 100, 0, 1)  -- Assume max armor is 100
+			local armorColor
+
+			if armorFrac > 0.75 then
+				-- Bright cyan (100% to 75%)
+				local t = (armorFrac - 0.75) / 0.25
+				armorColor = Color(Lerp(t, 150, 100), Lerp(t, 255, 255), 255, alpha)
+			elseif armorFrac > 0.5 then
+				-- Cyan to light blue (75% to 50%)
+				local t = (armorFrac - 0.5) / 0.25
+				armorColor = Color(Lerp(t, 200, 150), Lerp(t, 220, 255), 255, alpha)
+			elseif armorFrac > 0.25 then
+				-- Light blue to blue (50% to 25%)
+				local t = (armorFrac - 0.25) / 0.25
+				armorColor = Color(Lerp(t, 220, 200), Lerp(t, 200, 220), 255, alpha)
+			else
+				-- Blue to darker blue (25% to 0%)
+				local t = armorFrac / 0.25
+				armorColor = Color(Lerp(t, 100, 220), Lerp(t, 150, 200), 255, alpha)
+			end
+
+			-- Draw armor value (centered to handle variable digit counts)
+			local armorStr = tostring(armor)
+			surface.SetFont("M9KR_Armor")
+			local armorWidth = surface.GetTextSize(armorStr)
+			local armorCenterX = armorX - (armorWidth / 2)
+
+			draw.SimpleText(armorStr, "M9KR_Armor", armorCenterX, armorY,
+				armorColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+
+			-- Draw "ARMOR" label (faded white, centered under the number)
+			draw.SimpleText("ARMOR", "M9KR_ArmorLabel", armorCenterX, armorLabelY,
+				whiteFaded, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+		end
 	end
 
-	-- 10. Squad Following Indicator (bottom center, M9KR styled with icons)
-	-- Get squad data from networked variable (set by server-side tracker)
-	local squadDataJSON = ply:GetNWString("M9KR_SquadData", "")
-	local squadCount = ply:GetNWInt("M9KR_SquadCount", 0)
+	-- 10. Squad Following Indicator (modes 2 and 4 only)
+	if hudMode == 2 or hudMode == 4 then
+		-- Get squad data from networked variable (set by server-side tracker)
+		local squadDataJSON = ply:GetNWString("M9KR_SquadData", "")
+		local squadCount = ply:GetNWInt("M9KR_SquadCount", 0)
 
-	-- Only draw the squad indicator if there are squad members
-	if squadCount > 0 and squadDataJSON ~= "" then
-		local squadData = util.JSONToTable(squadDataJSON) or {}
-		local squadY = scrH - 80  -- Bottom of screen
-		local squadLabelY = scrH - 55  -- Label below icons
+		-- Only draw the squad indicator if there are squad members
+		if squadCount > 0 and squadDataJSON ~= "" then
+			local squadData = util.JSONToTable(squadDataJSON) or {}
+			local squadY = scrH - 80  -- Bottom of screen
+			local squadLabelY = scrH - 55  -- Label below icons
 
-		-- Update animation data for death fades
-		for npcType, currentCount in pairs(squadData) do
-			if not squadAnimData[npcType] then
-				squadAnimData[npcType] = {count = currentCount, animCount = currentCount, fadeStart = 0}
-			else
-				local animData = squadAnimData[npcType]
-				-- Detect count decrease (death)
-				if currentCount < animData.count then
-					animData.fadeStart = CurTime()
-					animData.animCount = animData.count  -- Keep old count for animation
+			-- Update animation data for death fades
+			for npcType, currentCount in pairs(squadData) do
+				if not squadAnimData[npcType] then
+					squadAnimData[npcType] = {count = currentCount, animCount = currentCount, fadeStart = 0}
+				else
+					local animData = squadAnimData[npcType]
+					-- Detect count decrease (death)
+					if currentCount < animData.count then
+						animData.fadeStart = CurTime()
+						animData.animCount = animData.count  -- Keep old count for animation
+					end
+					animData.count = currentCount
 				end
-				animData.count = currentCount
-			end
-		end
-
-		-- Build display list of NPC types with counts > 0
-		local displayTypes = {}
-		for npcType, count in pairs(squadData) do
-			if count > 0 then
-				table.insert(displayTypes, {type = npcType, count = count})
-			end
-		end
-
-		-- Calculate total width for centering
-		local iconSize = 32
-		local spacing = 10
-		local iconTextSpacing = 2  -- Reduced from 5 to bring text closer to icons
-		local typeSpacing = 15  -- Space between different NPC types
-		local totalWidth = 0
-
-		for i, typeData in ipairs(displayTypes) do
-			-- Icon + "x" + number + spacing
-			surface.SetFont("M9KR_Caliber")
-			local numText = "x " .. typeData.count
-			local textW, _ = surface.GetTextSize(numText)
-			totalWidth = totalWidth + iconSize + iconTextSpacing + textW
-			if i < #displayTypes then
-				totalWidth = totalWidth + typeSpacing
-			end
-		end
-
-		-- Draw centered icons with counts
-		local startX = (scrW / 2) - (totalWidth / 2)
-		local currentX = startX
-
-		for i, typeData in ipairs(displayTypes) do
-			local animData = squadAnimData[typeData.type]
-			local isMedic = (typeData.type == "medic")
-
-			-- Calculate death fade color
-			local numColor = Color(255, 255, 255, alpha)
-			if animData and animData.fadeStart > 0 and CurTime() - animData.fadeStart < SQUAD_FADE_DURATION then
-				-- Animating: fade from white to red
-				local fadeProg = (CurTime() - animData.fadeStart) / SQUAD_FADE_DURATION
-				numColor = Color(255, Lerp(fadeProg, 255, 0), Lerp(fadeProg, 255, 0), alpha)
-
-				-- Display animated count during fade
-				typeData.count = animData.animCount
-			elseif animData and CurTime() - animData.fadeStart >= SQUAD_FADE_DURATION then
-				-- Animation done, update animated count
-				animData.animCount = animData.count
-				animData.fadeStart = 0
 			end
 
-			-- Draw custom squad icon (golden silhouette)
-			DrawSquadIcon(currentX, squadY - iconSize, iconSize, isMedic, alpha)
+			-- Build display list of NPC types with counts > 0
+			local displayTypes = {}
+			for npcType, count in pairs(squadData) do
+				if count > 0 then
+					table.insert(displayTypes, {type = npcType, count = count})
+				end
+			end
 
-			-- Draw count next to icon
-			local numText = "x " .. typeData.count
-			draw.SimpleText(numText, "M9KR_Caliber", currentX + iconSize + iconTextSpacing, squadY - (iconSize / 2),
-				numColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+			-- Calculate total width for centering
+			local iconSize = 32
+			local spacing = 10
+			local iconTextSpacing = 2  -- Reduced from 5 to bring text closer to icons
+			local typeSpacing = 15  -- Space between different NPC types
+			local totalWidth = 0
 
-			-- Move to next position
-			surface.SetFont("M9KR_Caliber")
-			local textW, _ = surface.GetTextSize(numText)
-			currentX = currentX + iconSize + iconTextSpacing + textW + typeSpacing
+			for i, typeData in ipairs(displayTypes) do
+				-- Icon + "x" + number + spacing
+				surface.SetFont("M9KR_Caliber")
+				local numText = "x " .. typeData.count
+				local textW, _ = surface.GetTextSize(numText)
+				totalWidth = totalWidth + iconSize + iconTextSpacing + textW
+				if i < #displayTypes then
+					totalWidth = totalWidth + typeSpacing
+				end
+			end
+
+			-- Draw centered icons with counts
+			local startX = (scrW / 2) - (totalWidth / 2)
+			local currentX = startX
+
+			for i, typeData in ipairs(displayTypes) do
+				local animData = squadAnimData[typeData.type]
+				local isMedic = (typeData.type == "medic")
+
+				-- Calculate death fade color
+				local numColor = Color(255, 255, 255, alpha)
+				if animData and animData.fadeStart > 0 and CurTime() - animData.fadeStart < SQUAD_FADE_DURATION then
+					-- Animating: fade from white to red
+					local fadeProg = (CurTime() - animData.fadeStart) / SQUAD_FADE_DURATION
+					numColor = Color(255, Lerp(fadeProg, 255, 0), Lerp(fadeProg, 255, 0), alpha)
+
+					-- Display animated count during fade
+					typeData.count = animData.animCount
+				elseif animData and CurTime() - animData.fadeStart >= SQUAD_FADE_DURATION then
+					-- Animation done, update animated count
+					animData.animCount = animData.count
+					animData.fadeStart = 0
+				end
+
+				-- Draw custom squad icon (golden silhouette)
+				DrawSquadIcon(currentX, squadY - iconSize, iconSize, isMedic, alpha)
+
+				-- Draw count next to icon
+				local numText = "x " .. typeData.count
+				draw.SimpleText(numText, "M9KR_Caliber", currentX + iconSize + iconTextSpacing, squadY - (iconSize / 2),
+					numColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+				-- Move to next position
+				surface.SetFont("M9KR_Caliber")
+				local textW, _ = surface.GetTextSize(numText)
+				currentX = currentX + iconSize + iconTextSpacing + textW + typeSpacing
+			end
+
+			-- Draw "SQUAD" label below
+			draw.SimpleText("SQUAD", "M9KR_HealthLabel", scrW / 2, squadLabelY,
+				whiteFaded, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
 		end
-
-		-- Draw "SQUAD" label below
-		draw.SimpleText("SQUAD", "M9KR_HealthLabel", scrW / 2, squadLabelY,
-			whiteFaded, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
 	end
 end)
 
@@ -615,13 +630,6 @@ local HUD_MANAGED = {
 	["CHudCrosshair"] = true,
 }
 
-local HUD_HIDDEN = {
-	["CHudAmmo"] = true,
-	["CHudSecondaryAmmo"] = true,
-	["CHudHealth"] = true,
-	["CHudBattery"] = true,
-	["CHudSquadStatus"] = true,
-}
 
 hook.Add("HUDShouldDraw", "M9KR_HUD_HideDefault", function(name)
 	-- Fast path: only process relevant HUD elements
@@ -633,18 +641,30 @@ hook.Add("HUDShouldDraw", "M9KR_HUD_HideDefault", function(name)
 	local weapon = ply:GetActiveWeapon()
 	if not IsValid(weapon) then return end
 
-	-- Check if this is an M9K weapon RIGHT NOW (no caching)
-	local isM9K = weapon.Base and M9KR.WeaponBases[weapon.Base]
-
-	-- INSTANTLY hide HUD elements for M9K weapons (if custom HUD enabled)
-	if isM9K and GetConVar("m9kr_hud_mode"):GetInt() == 1 then
-		if HUD_HIDDEN[name] then
-			return false
-		end
+	-- Crosshair hiding (applies regardless of HUD mode)
+	if name == "CHudCrosshair" and weapon.DrawCrosshair == false then
+		return false
 	end
 
-	-- Crosshair hiding
-	if name == "CHudCrosshair" and weapon.DrawCrosshair == false then
+	-- Check if this is an M9K weapon RIGHT NOW (no caching)
+	local isM9K = weapon.Base and M9KR.WeaponBases[weapon.Base]
+	if not isM9K then return end
+
+	local hudMode = GetConVar("m9kr_hud_mode"):GetInt()
+	if hudMode == 0 then return end
+
+	-- Mode >= 1: Always hide default ammo (custom weapon HUD replaces it)
+	if name == "CHudAmmo" or name == "CHudSecondaryAmmo" then
+		return false
+	end
+
+	-- Mode 3 or 4: Hide default health/armor (custom health/armor HUD replaces it)
+	if (hudMode == 3 or hudMode == 4) and (name == "CHudHealth" or name == "CHudBattery") then
+		return false
+	end
+
+	-- Mode 2 or 4: Hide default squad (custom squad HUD replaces it)
+	if (hudMode == 2 or hudMode == 4) and name == "CHudSquadStatus" then
 		return false
 	end
 end)
