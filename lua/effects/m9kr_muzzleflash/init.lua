@@ -1,21 +1,34 @@
 --[[
-	M9K Reloaded - Pistol Muzzle Flash Effect
+	M9K Reloaded - Consolidated Muzzle Flash Effect
 	Uses TFA Realistic Muzzleflashes 2.0 PCF particle system for optimal performance
 
-	TFA Realistic 2.0 Properties:
-	- Particle: muzzleflash_pistol / muzzleflash_pistol_optimized
-	- Life: 0.085 seconds
-	- HeatSize: 0.70 (smaller for pistols)
-	- Dynamic light: 384 size, dimmer than rifles
+	Single parameterized effect replacing 10 separate muzzle flash files.
+	The active muzzle type is read from the weapon's m9kr_ActiveMuzzleType field,
+	which is set by M9KR_SpawnMuzzleFlash() or OnM9KRShotsFiredChanged().
+
+	Each type key maps to a config with: life, heat, flash, particle names,
+	dlight brightness, and dlight size.
 
 	Performance: PCF particles are hardware-accelerated, ~75% less CPU overhead than programmatic particles
 ]]--
 
 local blankvec = Vector(0, 0, 0)
 
-EFFECT.Life = 0.085
-EFFECT.HeatSize = 0.70
-EFFECT.FlashSize = 0.70
+-- ============================================================================
+-- Muzzle flash type configs
+-- ============================================================================
+local MUZZLE_CONFIGS = {
+	pistol       = { life = 0.085, heat = 0.70, flash = 0.70, particle = "muzzleflash_pistol",       particleOpt = "muzzleflash_pistol_optimized",       brightness = 0.9,  dlightSize = 384  },
+	revolver     = { life = 0.1,   heat = 0.85, flash = 0.85, particle = "muzzleflash_pistol_rbull", particleOpt = "muzzleflash_pistol_rbull_optimized", brightness = 1.25, dlightSize = 512  },
+	smg          = { life = 0.085, heat = 0.80, flash = 0.75, particle = "muzzleflash_smg_bizon",    particleOpt = "muzzleflash_smg_optimized",          brightness = 0.95, dlightSize = 384  },
+	rifle        = { life = 0.085, heat = 0.80, flash = 0.80, particle = "muzzleflash_6",            particleOpt = "muzzleflash_6_optimized",            brightness = 1.05, dlightSize = 1024 },
+	shotgun      = { life = 0.1,   heat = 1.0,  flash = 1.0,  particle = "muzzleflash_shotgun",      particleOpt = "muzzleflash_shotgun_optimized",      brightness = 1.25, dlightSize = 512  },
+	shotgun_slug = { life = 0.1,   heat = 1.0,  flash = 1.0,  particle = "muzzleflash_slug",         particleOpt = "muzzleflash_shotgun_optimized",      brightness = 1.25, dlightSize = 512  },
+	sniper       = { life = 0.1,   heat = 0.90, flash = 0.90, particle = "muzzleflash_sr25",         particleOpt = "muzzleflash_sr25_optimized",         brightness = 1.25, dlightSize = 512  },
+	lmg          = { life = 0.1,   heat = 0.80, flash = 0.80, particle = "muzzleflash_minimi",       particleOpt = "muzzleflash_vollmer_optimized",      brightness = 1.05, dlightSize = 512  },
+	hmg          = { life = 0.1,   heat = 0.90, flash = 0.90, particle = "muzzleflash_minimi",       particleOpt = "muzzleflash_vollmer_optimized",      brightness = 1.25, dlightSize = 512  },
+	silenced     = { life = 0.085, heat = 0.65, flash = 0.50, particle = "muzzleflash_suppressed",   particleOpt = "muzzleflash_suppressed_optimized",   brightness = 0.85, dlightSize = 128  },
+}
 
 function EFFECT:Init(data)
 	self.Position = blankvec
@@ -23,6 +36,13 @@ function EFFECT:Init(data)
 	self.WeaponEntOG = self.WeaponEnt
 	self.Attachment = data:GetAttachment()
 	self.Dir = data:GetNormal()
+
+	-- Read muzzle type from weapon (set by M9KR_SpawnMuzzleFlash / OnM9KRShotsFiredChanged)
+	local muzzleType = "rifle"
+	if IsValid(self.WeaponEntOG) then
+		muzzleType = self.WeaponEntOG.m9kr_ActiveMuzzleType or "rifle"
+	end
+	local cfg = MUZZLE_CONFIGS[muzzleType] or MUZZLE_CONFIGS["rifle"]
 
 	local owent
 
@@ -39,6 +59,7 @@ function EFFECT:Init(data)
 			self.WeaponEnt = owent:GetActiveWeapon()
 			if not IsValid(self.WeaponEnt) then return end
 		else
+
 			self.WeaponEnt = owent:GetViewModel()
 
 			local theirweapon = owent:GetActiveWeapon()
@@ -144,43 +165,48 @@ function EFFECT:Init(data)
 
 	local dir = self.Norm
 
+	-- Check if we're using fallback position (scoped in first person)
 	local usingFallbackPos = (isScoped and isFirstPerson)
 
+	-- Check if muzzle smoke is enabled (controls particle variant selection)
 	local smokeCvar = GetConVar("m9kr_muzzlesmoke")
 	local smokeEnabled = smokeCvar and smokeCvar:GetInt() == 1
 
+	-- TFA Realistic 2.0: Choose particle variant based on smoke setting
 	if usingFallbackPos or correctedThirdPerson then
+		-- Unattached particle at computed world position
 		if smokeEnabled then
-			ParticleEffect("muzzleflash_pistol", self.vOffset, self.Dir:Angle())
+			ParticleEffect(cfg.particle, self.vOffset, self.Dir:Angle())
 		else
-			ParticleEffect("muzzleflash_pistol_optimized", self.vOffset, self.Dir:Angle())
+			ParticleEffect(cfg.particleOpt, self.vOffset, self.Dir:Angle())
 		end
 	else
+		-- Attach to weapon for smooth tracking
 		if smokeEnabled then
-			ParticleEffectAttach("muzzleflash_pistol", PATTACH_POINT_FOLLOW, self.WeaponEnt, self.Attachment)
+			ParticleEffectAttach(cfg.particle, PATTACH_POINT_FOLLOW, self.WeaponEnt, self.Attachment)
 		else
-			ParticleEffectAttach("muzzleflash_pistol_optimized", PATTACH_POINT_FOLLOW, self.WeaponEnt, self.Attachment)
+			ParticleEffectAttach(cfg.particleOpt, PATTACH_POINT_FOLLOW, self.WeaponEnt, self.Attachment)
 		end
 	end
 
-	-- scotchmuzzleflash sprites
+	-- Default scotchmuzzleflash sprites (from TFA Realistic 2.0)
 	if GetConVar("cl_tfa_rms_default_scotchmuzzleflash"):GetFloat() >= 1 then
 		local emitter = ParticleEmitter(self.vOffset)
 		local AddVel = Vector()
 		local sval = 1 - math.random(0, 1) * 2
-		local flashCount = math.Round(self.FlashSize * 8)
+		local flashCount = math.Round(cfg.flash * 8)
 
 		for _ = 1, flashCount do
 			local particle = emitter:Add("effects/scotchmuzzleflash1", self.vOffset + FrameTime() * AddVel)
 
 			if (particle) then
-				particle:SetVelocity(dir * 6 * self.FlashSize + 1.05 * AddVel)
+				particle:SetVelocity(dir * 6 * cfg.flash + 1.05 * AddVel)
 				particle:SetLifeTime(0)
-				particle:SetDieTime(self.Life * 1)
+				particle:SetDieTime(cfg.life * 1)
 				particle:SetStartAlpha(math.Rand(40, 140))
 				particle:SetEndAlpha(0)
-				particle:SetStartSize(2 * math.Rand(1, 1.5) * self.FlashSize)
-				particle:SetEndSize(20 * math.Rand(0.5, 1) * self.FlashSize)
+				particle:SetStartSize(2 * math.Rand(1, 1.5) * cfg.flash)
+				particle:SetEndSize(20 * math.Rand(0.5, 1) * cfg.flash)
 				particle:SetRoll(math.rad(math.Rand(0, 360)))
 				particle:SetRollDelta(math.rad(math.Rand(30, 60)) * sval)
 				particle:SetColor(255, 255, 255)
@@ -195,7 +221,7 @@ function EFFECT:Init(data)
 		emitter:Finish()
 	end
 
-	-- Dynamic lighting
+	-- Dynamic lighting (from TFA Realistic 2.0)
 	if GetConVar("cl_tfa_rms_muzzleflash_dynlight"):GetFloat() >= 1 then
 		local dlight
 
@@ -212,27 +238,27 @@ function EFFECT:Init(data)
 			dlight.r = 255
 			dlight.g = 192
 			dlight.b = 64
-			dlight.brightness = 0.9
+			dlight.brightness = cfg.brightness
 			dlight.Decay = 500
-			dlight.Size = 384
+			dlight.Size = cfg.dlightSize
 			dlight.DieTime = CurTime() + fadeouttime
 		end
 	end
 
-	-- Heatwave effect
+	-- Heatwave effect (from TFA Realistic 2.0)
 	if TFA and TFA.GetGasEnabled and TFA.GetGasEnabled() then
 		local emitter = ParticleEmitter(self.vOffset)
 		local AddVel = Vector()
 		local particle = emitter:Add("sprites/heatwave", self.vOffset + dir*2)
 
 		if (particle) then
-			particle:SetVelocity(dir * 25 * self.HeatSize + 1.05 * AddVel)
+			particle:SetVelocity(dir * 25 * cfg.heat + 1.05 * AddVel)
 			particle:SetLifeTime(0)
-			particle:SetDieTime(self.Life)
+			particle:SetDieTime(cfg.life)
 			particle:SetStartAlpha(math.Rand(200, 225))
 			particle:SetEndAlpha(0)
-			particle:SetStartSize(math.Rand(3, 5) * self.HeatSize)
-			particle:SetEndSize(math.Rand(8, 12) * self.HeatSize)
+			particle:SetStartSize(math.Rand(3, 5) * cfg.heat)
+			particle:SetEndSize(math.Rand(8, 12) * cfg.heat)
 			particle:SetRoll(math.Rand(0, 360))
 			particle:SetRollDelta(math.Rand(-2, 2))
 			particle:SetAirResistance(5)

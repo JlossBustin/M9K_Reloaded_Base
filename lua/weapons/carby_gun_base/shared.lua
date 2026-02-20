@@ -10,8 +10,8 @@ SWEP.Purpose = ""
 SWEP.Instructions = ""
 SWEP.MuzzleAttachment = "1"
 SWEP.WMCorrectedMuzzle = false
-SWEP.MuzzleFlashEffect = "m9kr_muzzleflash_rifle"
-SWEP.MuzzleFlashEffectSilenced = nil
+SWEP.MuzzleFlashType = "rifle"
+SWEP.MuzzleFlashTypeSilenced = nil
 SWEP.DrawCrosshair = true
 SWEP.ShowCrosshairInADS = false
 SWEP.ViewModelFOV = 65
@@ -189,17 +189,20 @@ function SWEP:OnM9KRShotsFiredChanged(name, old, new)
 	local mfCvar = GetConVar("M9KR_MuzzleFlash")
 	if not mfCvar or not mfCvar:GetBool() then return end
 
-	local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
-	if self.Silenced and self.MuzzleFlashEffectSilenced then
-		effectName = self.MuzzleFlashEffectSilenced
+	local muzzleType = self.MuzzleFlashType or "rifle"
+	if self.Silenced and self.MuzzleFlashTypeSilenced then
+		muzzleType = self.MuzzleFlashTypeSilenced
 	end
+	if not muzzleType then return end
+
+	self.m9kr_ActiveMuzzleType = muzzleType
 
 	local fx = EffectData()
 	fx:SetEntity(self)
 	fx:SetOrigin(owner:GetShootPos())
 	fx:SetNormal(owner:GetAimVector())
 	fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
-	util.Effect(effectName, fx)
+	util.Effect("m9kr_muzzleflash", fx)
 
 	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
 	if smokeCvar and smokeCvar:GetInt() == 1 then
@@ -849,10 +852,13 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	local mfCvar = GetConVar("M9KR_MuzzleFlash")
 	if not mfCvar or not mfCvar:GetBool() then return end
 
-	local effectName = self.MuzzleFlashEffect or "m9kr_muzzleflash_rifle"
-	if self.Silenced and self.MuzzleFlashEffectSilenced then
-		effectName = self.MuzzleFlashEffectSilenced
+	local muzzleType = self.MuzzleFlashType or "rifle"
+	if self.Silenced and self.MuzzleFlashTypeSilenced then
+		muzzleType = self.MuzzleFlashTypeSilenced
 	end
+	if not muzzleType then return end
+
+	self.m9kr_ActiveMuzzleType = muzzleType
 
 	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
 	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
@@ -864,7 +870,7 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 		fx:SetOrigin(self.Owner:GetShootPos())
 		fx:SetNormal(self.Owner:GetAimVector())
 		fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
-		util.Effect(effectName, fx)
+		util.Effect("m9kr_muzzleflash", fx)
 		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx) end
 		return
 	end
@@ -878,7 +884,7 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	-- MP CLIENT: queue deferred flash
 	if CLIENT then
 		if not IsFirstTimePredicted() then return end
-		self.m9kr_PendingMuzzleFlash = {name = effectName, smoke = doSmoke, time = CurTime()}
+		self.m9kr_PendingMuzzleFlash = {smoke = doSmoke, time = CurTime()}
 	end
 end
 
@@ -912,7 +918,7 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 			fx:SetNormal(ang:Forward())
 			fx:SetAttachment(self.MuzzleAttachment)
 
-			util.Effect(pending.name, fx)
+			util.Effect("m9kr_muzzleflash", fx)
 			if pending.smoke then
 				util.Effect("m9kr_muzzlesmoke", fx)
 			end

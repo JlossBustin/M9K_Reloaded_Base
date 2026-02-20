@@ -85,6 +85,7 @@ if SERVER then
 	AddCSLuaFile("m9kr/shared/m9kr_penetration.lua")
 
 	-- Client files
+	AddCSLuaFile("m9kr/client/m9kr_impact_helpers.lua")
 	AddCSLuaFile("m9kr/client/m9kr_particles.lua")
 	AddCSLuaFile("m9kr/client/m9kr_muzzleflash_dynlight.lua")
 	AddCSLuaFile("m9kr/client/m9kr_muzzleflash_scotch.lua")
@@ -114,6 +115,7 @@ end
 -- ============================================================================
 
 if CLIENT then
+	include("m9kr/client/m9kr_impact_helpers.lua")
 	include("m9kr/client/m9kr_particles.lua")
 	include("m9kr/client/m9kr_muzzleflash_dynlight.lua")
 	include("m9kr/client/m9kr_muzzleflash_scotch.lua")
