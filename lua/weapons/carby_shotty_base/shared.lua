@@ -751,10 +751,8 @@ function SWEP:Holster()
 		return true
 	end
 
-	local entIndex = self:EntIndex()
-	if not entIndex or entIndex <= 0 then
-		return true
-	end
+	local entIndex = self.m9kr_TimerID
+	if not entIndex then return true end
 
 	local burstTimerName = "M9K_Burst_" .. entIndex
 	if timer.Exists(burstTimerName) then
@@ -845,10 +843,8 @@ function SWEP:OnRemove()
 		return
 	end
 
-	local entIndex = self:EntIndex()
-	if not entIndex or entIndex <= 0 then
-		return
-	end
+	local entIndex = self.m9kr_TimerID
+	if not entIndex then return end
 
 	local burstTimerName = "M9K_Burst_" .. entIndex
 	if timer.Exists(burstTimerName) then

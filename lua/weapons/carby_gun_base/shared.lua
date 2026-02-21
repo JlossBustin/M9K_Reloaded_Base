@@ -230,6 +230,7 @@ function SWEP:UpdateWorldModel()
 end
 
 function SWEP:Initialize()
+	self.m9kr_TimerID = self:EntIndex() .. "_" .. CurTime()
 	self.Reloadaftershoot = 0
 	self.OriginalHoldType = self.HoldType or "ar2"
 	self:M9KR_SetHoldType(self.HoldType)
@@ -459,17 +460,17 @@ function SWEP:Holster()
 	self.NextBurstShotTime = nil
 
 	-- Cancel active timers to prevent callbacks after weapon switch
-	local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
+	local reloadTimerName = "M9K_Reload_" .. self.m9kr_TimerID
 	if timer.Exists(reloadTimerName) then
 		timer.Remove(reloadTimerName)
 	end
 	
-	local sprintTimerName = "M9K_ReloadSprint_" .. self:EntIndex()
+	local sprintTimerName = "M9K_ReloadSprint_" .. self.m9kr_TimerID
 	if timer.Exists(sprintTimerName) then
 		timer.Remove(sprintTimerName)
 	end
 
-	local silencerTimerName = "M9K_Silencer_" .. self:EntIndex()
+	local silencerTimerName = "M9K_Silencer_" .. self.m9kr_TimerID
 	if timer.Exists(silencerTimerName) then
 		timer.Remove(silencerTimerName)
 	end
@@ -517,22 +518,22 @@ end
 
 function SWEP:OnRemove()
 	-- Clean up all active timers
-	local timerName = "M9K_Burst_" .. self:EntIndex()
+	local timerName = "M9K_Burst_" .. self.m9kr_TimerID
 	if timer.Exists(timerName) then
 		timer.Remove(timerName)
 	end
 	
-	local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
+	local reloadTimerName = "M9K_Reload_" .. self.m9kr_TimerID
 	if timer.Exists(reloadTimerName) then
 		timer.Remove(reloadTimerName)
 	end
 	
-	local sprintTimerName = "M9K_ReloadSprint_" .. self:EntIndex()
+	local sprintTimerName = "M9K_ReloadSprint_" .. self.m9kr_TimerID
 	if timer.Exists(sprintTimerName) then
 		timer.Remove(sprintTimerName)
 	end
 	
-	local silencerTimerName = "M9K_Silencer_" .. self:EntIndex()
+	local silencerTimerName = "M9K_Silencer_" .. self.m9kr_TimerID
 	if timer.Exists(silencerTimerName) then
 		timer.Remove(silencerTimerName)
 	end
@@ -1341,7 +1342,7 @@ function SWEP:Reload()
 
 		-- Handle the +1 ammo after animation completes
 		local waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
-		local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
+		local reloadTimerName = "M9K_Reload_" .. self.m9kr_TimerID
 		timer.Create(reloadTimerName, waitdammit + 0.1, 1, function()
 			if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 			
@@ -1402,7 +1403,7 @@ function SWEP:Reload()
 
 	if SERVER and IsValid(self.Weapon) then
 		local waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
-		local reloadTimerName = "M9K_Reload_" .. self:EntIndex()
+		local reloadTimerName = "M9K_Reload_" .. self.m9kr_TimerID
 		timer.Create(reloadTimerName, waitdammit + 0.1, 1, function()
 			if not IsValid(self.Weapon) or not IsValid(self.Owner) then
 				return
@@ -1448,7 +1449,7 @@ function SWEP:Reload()
 					-- Mark that we're in post-reload transition to prevent lateral tilt issues
 					self.Weapon:SetNWFloat("PostReloadTransition", CurTime() + 0.35)
 					
-					local sprintTimerName = "M9K_ReloadSprint_" .. self:EntIndex()
+					local sprintTimerName = "M9K_ReloadSprint_" .. self.m9kr_TimerID
 					timer.Create(sprintTimerName, 0.35, 1, function()
 						if IsValid(self.Weapon) and IsValid(self.Owner) then
 							-- Only enter sprint if player is actually sprinting (moving while holding sprint key AND pressing movement keys)
@@ -1547,7 +1548,7 @@ function SWEP:Silencer()
 
 	self:UpdateWorldModel()
 
-	local silencerTimerName = "M9K_Silencer_" .. self:EntIndex()
+	local silencerTimerName = "M9K_Silencer_" .. self.m9kr_TimerID
 	timer.Create(silencerTimerName, animDuration, 1, function()
 		if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 

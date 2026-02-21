@@ -369,12 +369,8 @@ function SWEP:Holster()
 	end
 
 	-- Clean up all active timers when holstering to prevent reload completion after weapon switch
-	local entIndex = self:EntIndex()
-
-	-- Additional safety check for valid entity index
-	if not entIndex or entIndex <= 0 then
-		return true
-	end
+	local entIndex = self.m9kr_TimerID
+	if not entIndex then return true end
 
 	-- Clean up burst timer (from parent gun_base)
 	local burstTimerName = "M9K_Burst_" .. entIndex
@@ -477,12 +473,8 @@ function SWEP:OnRemove()
 	end
 
 	-- Clean up all active timers when weapon is removed
-	local entIndex = self:EntIndex()
-
-	-- Additional safety check for valid entity index
-	if not entIndex or entIndex <= 0 then
-		return
-	end
+	local entIndex = self.m9kr_TimerID
+	if not entIndex then return end
 
 	-- Clean up burst timer (from parent gun_base)
 	local burstTimerName = "M9K_Burst_" .. entIndex
@@ -542,12 +534,7 @@ function SWEP:BoltBack()
 
 	if self.Weapon:Clip1() > 0 or self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType()) > 0 then
 		if SERVER then
-			local entIndex = self:EntIndex()
-
-			-- Additional safety check for valid entity index
-			if not entIndex or entIndex <= 0 then
-				return
-			end
+			if not self.m9kr_TimerID then return end
 
 			if self.Weapon:GetClass() ~= self.Gun then return end
 
@@ -560,7 +547,7 @@ function SWEP:BoltBack()
 			-- Create timer to return to idle after bolt animation completes
 			-- NOTE: We do NOT set Reloading=true here - that flag is only for magazine reloads
 			-- Fire rate timing is already handled by SetNextPrimaryFire in gun_base
-			local boltCompleteTimerName = "M9K_ScopedBoltComplete_" .. entIndex
+			local boltCompleteTimerName = "M9K_ScopedBoltComplete_" .. self.m9kr_TimerID
 			timer.Create(boltCompleteTimerName, boltactiontime, 1, function()
 				if not IsValid(self) or not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
@@ -705,7 +692,7 @@ function SWEP:Reload()
 
 		if SERVER then
 			local waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
-			local reloadTimerName = "M9K_ScopedReload_" .. self:EntIndex()
+			local reloadTimerName = "M9K_ScopedReload_" .. self.m9kr_TimerID
 			timer.Create(reloadTimerName, waitdammit + 0.1, 1, function()
 				if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
@@ -772,7 +759,7 @@ function SWEP:Reload()
 			waitdammit = self.Owner:GetViewModel():SequenceDuration() / (self.ReloadSpeedModifier or 1)
 		end
 
-		local reloadTimerName = "M9K_ScopedReload_" .. self:EntIndex()
+		local reloadTimerName = "M9K_ScopedReload_" .. self.m9kr_TimerID
 		timer.Create(reloadTimerName, waitdammit + .1, 1, function()
 			if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 
@@ -843,7 +830,7 @@ function SWEP:PostReloadScopeCheck()
 			-- Mark that we're in post-reload transition to prevent lateral tilt issues
 			self.Weapon:SetNWFloat("PostReloadTransition", CurTime() + 0.35)
 			
-			local sprintTimerName = "M9K_ScopedReloadSprint_" .. self:EntIndex()
+			local sprintTimerName = "M9K_ScopedReloadSprint_" .. self.m9kr_TimerID
 			timer.Create(sprintTimerName, 0.35, 1, function()
 				if IsValid(self.Weapon) and IsValid(self.Owner) then
 					-- Only enter sprint if player is actually sprinting (moving while holding sprint key AND pressing movement keys)
