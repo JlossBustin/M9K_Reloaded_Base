@@ -635,7 +635,9 @@ function SWEP:CheckLowAmmo()
 
 	if maxClip <= 1 then return end
 
-	local threshold = GetConVar("m9kr_low_ammo_threshold"):GetInt() / 100
+	local thresholdCvar = GetConVar("m9kr_low_ammo_threshold")
+	if not thresholdCvar then return end
+	local threshold = thresholdCvar:GetInt() / 100
 	local isLowAmmo = clip <= (maxClip * threshold) and clip > 0
 
 	-- For high-RPM weapons with SoundIndicatorInterval, throttle the warning sound
@@ -774,9 +776,15 @@ end)
 
 -- Bullet Impact Effects
 -- ConVars created server-side in m9kr_autoload.lua, replicated to clients
+-- Lazy-init: replicated ConVars may not exist yet on MP clients
 
-local M9KR_BulletImpact = GetConVar("m9kr_bullet_impact")
-local M9KR_MetalImpact = GetConVar("m9kr_metal_impact")
+local M9KR_BulletImpact, M9KR_MetalImpact
+
+local function GetImpactConVars()
+	M9KR_BulletImpact = M9KR_BulletImpact or GetConVar("m9kr_bullet_impact")
+	M9KR_MetalImpact = M9KR_MetalImpact or GetConVar("m9kr_metal_impact")
+	return M9KR_BulletImpact ~= nil
+end
 
 hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 	if not IsValid(entity) then return end
@@ -822,15 +830,17 @@ hook.Add("EntityFireBullets", "M9KR_BulletImpactEffects", function(entity, data)
 
 			fx:SetMagnitude(penetration)
 
-			local effectName = nil
-			if tr.MatType == MAT_METAL and M9KR_MetalImpact:GetInt() == 1 then
-				effectName = "m9kr_metal_impact"
-			elseif M9KR_BulletImpact:GetInt() == 1 then
-				effectName = "m9kr_bullet_impact"
-			end
+			if GetImpactConVars() then
+				local effectName = nil
+				if tr.MatType == MAT_METAL and M9KR_MetalImpact:GetInt() == 1 then
+					effectName = "m9kr_metal_impact"
+				elseif M9KR_BulletImpact:GetInt() == 1 then
+					effectName = "m9kr_bullet_impact"
+				end
 
-			if effectName then
-				util.Effect(effectName, fx)
+				if effectName then
+					util.Effect(effectName, fx)
+				end
 			end
 		end
 

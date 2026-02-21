@@ -11,7 +11,8 @@
 M9KR = M9KR or {}
 
 -- ConVar created in m9kr_autoload.lua (SP: replicated, MP: per-client)
-local heatwaveCvar = GetConVar("m9kr_muzzle_heatwave")
+-- Lazy-init in case load order differs in MP
+local heatwaveCvar
 
 --[[
 	Helper function: Spawn heatwave particle
@@ -29,6 +30,8 @@ function M9KR.SpawnHeatwave(emitter, position, direction, heatSize, life)
 	if not position then return end
 	if not direction then return end
 
+	heatwaveCvar = heatwaveCvar or GetConVar("m9kr_muzzle_heatwave")
+	if not heatwaveCvar then return end
 	local heatLevel = heatwaveCvar:GetInt()
 	if heatLevel == 0 then return end
 
