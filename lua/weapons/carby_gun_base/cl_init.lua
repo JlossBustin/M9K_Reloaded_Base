@@ -2,8 +2,11 @@
 
 include("shared.lua")
 
--- Cached ConVar for HUD mode (avoid GetConVar lookup every frame)
+-- Cached ConVars for HUD (avoid GetConVar lookup every frame)
 local m9kr_hud_mode = GetConVar("m9kr_hud_mode")
+local m9kr_hud_weapon = GetConVar("m9kr_hud_weapon")
+local m9kr_hud_health = GetConVar("m9kr_hud_health")
+local m9kr_hud_squad = GetConVar("m9kr_hud_squad")
 
 -- Client-side Animation Variable Defaults
 
@@ -1347,21 +1350,25 @@ function SWEP:HUDShouldDraw(name)
 		return false
 	end
 
-	local hudMode = m9kr_hud_mode:GetInt()
-	if hudMode == 0 then return end
+	-- m9kr_hud_mode is a bitfield: +1 = Weapon, +2 = Health/Armor, +4 = Squad
+	-- Only hide default elements when the server enables them AND the client wants them
+	local serverMode = m9kr_hud_mode:GetInt()
 
-	-- Mode >= 1: Hide default ammo (custom weapon HUD replaces it)
-	if name == "CHudAmmo" or name == "CHudSecondaryAmmo" then
+	-- Hide default ammo when server enables weapon HUD (bit 1) and client wants it
+	if (name == "CHudAmmo" or name == "CHudSecondaryAmmo")
+		and bit.band(serverMode, 1) ~= 0 and m9kr_hud_weapon:GetBool() then
 		return false
 	end
 
-	-- Mode 3 or 4: Hide default health/armor
-	if (hudMode == 3 or hudMode == 4) and (name == "CHudHealth" or name == "CHudBattery") then
+	-- Hide default health/armor when server enables it (bit 2) and client wants it
+	if (name == "CHudHealth" or name == "CHudBattery")
+		and bit.band(serverMode, 2) ~= 0 and m9kr_hud_health:GetBool() then
 		return false
 	end
 
-	-- Mode 2 or 4: Hide default squad
-	if (hudMode == 2 or hudMode == 4) and name == "CHudSquadStatus" then
+	-- Hide default squad when server enables it (bit 4) and client wants it
+	if name == "CHudSquadStatus"
+		and bit.band(serverMode, 4) ~= 0 and m9kr_hud_squad:GetBool() then
 		return false
 	end
 end

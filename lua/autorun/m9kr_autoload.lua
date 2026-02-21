@@ -57,8 +57,21 @@ if SERVER then
 		"Dust impact effects: 0 = GMod Default, 1 = M9K Custom", 0, 1)
 	CreateConVar("m9kr_muzzle_heatwave", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
 		"Muzzle heatwave level: 0 = Disabled, 1 = Full (100%), 2 = Reduced (50%)", 0, 2)
-	CreateConVar("m9kr_hud_mode", "4", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
-		"M9K:R HUD Mode: 0 = GMod Default, 1 = Weapon HUD, 2 = Weapon + Squad, 3 = Weapon + Health/Armor, 4 = Full HUD", 0, 4)
+	CreateConVar("m9kr_hud_mode", "7", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
+		"M9K HUD elements (bitfield): +1 = Weapon, +2 = Health/Armor, +4 = Squad. 0 = HL2 default, 7 = Full M9KR HUD", 0, 7)
+end
+
+-- ============================================================================
+-- Client ConVars (per-player preference, limited by server m9kr_hud_mode)
+-- ============================================================================
+
+if CLIENT then
+	CreateConVar("m9kr_hud_weapon", "1", FCVAR_ARCHIVE,
+		"Show M9K custom weapon HUD (ammo, fire mode). Limited by server m9kr_hud_mode", 0, 1)
+	CreateConVar("m9kr_hud_health", "1", FCVAR_ARCHIVE,
+		"Show M9K custom health/armor HUD. Limited by server m9kr_hud_mode", 0, 1)
+	CreateConVar("m9kr_hud_squad", "1", FCVAR_ARCHIVE,
+		"Show M9K custom squad HUD. Limited by server m9kr_hud_mode", 0, 1)
 end
 
 -- ============================================================================

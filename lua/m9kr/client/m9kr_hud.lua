@@ -1,26 +1,34 @@
 --[[
 	M9K Reloaded - Client-Side HUD System
 
-	Configurable HUD replacement for M9K weapons (m9kr_hud_mode 0-4):
+	Two-tier ConVar system:
+	  Server: m9kr_hud_mode (bitfield, 0-7) — sets which HUD groups are available
+	    +1 = Weapon HUD, +2 = Health/Armor HUD, +4 = Squad HUD
+	  Client: m9kr_hud_weapon, m9kr_hud_health, m9kr_hud_squad (0/1 each)
+	    Per-player opt-out, limited to what the server enables.
 
-	Weapon HUD (modes 1-4):
+	Weapon HUD (server bit 1):
 	- Fire mode indicator (SAFE / AUTO / SEMI / BURST)
 	- Weapon name (PrintName) and caliber (from ShellModel)
 	- Magazine capacity + chamber (+1)
 	- Reserve ammo (DefaultClip)
 
-	Health & Armor (modes 3, 4):
+	Health & Armor (server bit 2):
 	- Health with color gradient (green -> red)
 	- Armor display (when armor > 0)
 
-	Squad Indicator (modes 2, 4):
+	Squad Indicator (server bit 4):
 	- Follower count by NPC type with icons
 
 	All elements fade to lower opacity after 3 seconds of inactivity.
 	Only active when holding an M9K weapon; default GMod HUD shows otherwise.
 ]]--
 
--- ConVar: m9kr_hud_mode (server-controlled, defined in m9kr_autoload.lua)
+-- Cached ConVars
+local m9kr_hud_mode = GetConVar("m9kr_hud_mode")
+local m9kr_hud_weapon = GetConVar("m9kr_hud_weapon")
+local m9kr_hud_health = GetConVar("m9kr_hud_health")
+local m9kr_hud_squad = GetConVar("m9kr_hud_squad")
 
 -- Create custom fonts for HUD elements
 surface.CreateFont("M9KR_AmmoLarge", {
@@ -239,9 +247,17 @@ end
 	HUDPaint hook - Draw complete custom HUD
 ]]--
 hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
-	-- Check HUD mode
-	local hudMode = GetConVar("m9kr_hud_mode"):GetInt()
-	if hudMode == 0 then return end
+	-- Server bitfield: +1 = Weapon, +2 = Health/Armor, +4 = Squad
+	local serverMode = m9kr_hud_mode:GetInt()
+	if serverMode == 0 then return end
+
+	-- Compute effective state: server allows AND client wants
+	local drawWeapon = bit.band(serverMode, 1) ~= 0 and m9kr_hud_weapon:GetBool()
+	local drawHealth = bit.band(serverMode, 2) ~= 0 and m9kr_hud_health:GetBool()
+	local drawSquad = bit.band(serverMode, 4) ~= 0 and m9kr_hud_squad:GetBool()
+
+	-- Nothing to draw if client disabled everything the server allows
+	if not drawWeapon and not drawHealth and not drawSquad then return end
 
 	local ply = LocalPlayer()
 	if not IsValid(ply) or not ply:Alive() then return end
@@ -306,97 +322,85 @@ hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
 	local white = Color(255, 255, 255, alpha)
 	local whiteFaded = Color(255, 255, 255, alpha * 0.35)  -- Darker caliber and reserve text
 
-	-- Get weapon data
-	local weaponName = weapon.PrintName or "UNKNOWN"
-	local clip = weapon:Clip1()
-	local maxClip = weapon.Primary and weapon.Primary.ClipSize or 30
-	local reserve = weapon:Ammo1()
-	local caliber = GetCaliberFromShell(weapon.ShellModel)
+	-- Weapon HUD: fire mode, weapon name, caliber, ammo
+	if drawWeapon then
+		local weaponName = weapon.PrintName or "UNKNOWN"
+		local clip = weapon:Clip1()
+		local maxClip = weapon.Primary and weapon.Primary.ClipSize or 30
+		local reserve = weapon:Ammo1()
+		local caliber = GetCaliberFromShell(weapon.ShellModel)
 
-	-- Check if chambered
-	local isChambered = clip > maxClip
-	local displayClip = isChambered and maxClip or clip
+		local isChambered = clip > maxClip
+		local displayClip = isChambered and maxClip or clip
 
-	-- Get fire mode
-	local fireMode = "SAFE"
-	local fireModeColor = Color(255, 100, 130, alpha)  -- Pink-red for SAFE
+		-- Get fire mode
+		local fireMode = "SAFE"
+		local fireModeColor = Color(255, 100, 130, alpha)  -- Pink-red for SAFE
 
-	if weapon.GetIsOnSafe and weapon:GetIsOnSafe() then
-		fireMode = "SAFETY"
-		fireModeColor = Color(255, 100, 130, alpha)  -- Pink-red
-	elseif weapon.FireModes and weapon.GetCurrentFireMode then
-		local mode = weapon:GetCurrentFireMode()
-		if mode then
-			fireMode = weapon.FireModeNames and weapon.FireModeNames[mode] or string.upper(mode)
-			fireModeColor = Color(100, 255, 100, alpha)  -- Green when not on safe
+		if weapon.GetIsOnSafe and weapon:GetIsOnSafe() then
+			fireMode = "SAFETY"
+			fireModeColor = Color(255, 100, 130, alpha)  -- Pink-red
+		elseif weapon.FireModes and weapon.GetCurrentFireMode then
+			local mode = weapon:GetCurrentFireMode()
+			if mode then
+				fireMode = weapon.FireModeNames and weapon.FireModeNames[mode] or string.upper(mode)
+				fireModeColor = Color(100, 255, 100, alpha)  -- Green when not on safe
+			end
 		end
+
+		-- 1. Fire mode (centered)
+		draw.SimpleText(fireMode, "M9KR_FireMode", fireModeX, fireModeY,
+			fireModeColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+
+		-- 2. Weapon name and caliber (centered as combined unit with dot separator)
+		surface.SetFont("M9KR_WeaponName")
+		local weaponNameWidth = surface.GetTextSize(weaponName)
+		surface.SetFont("M9KR_Caliber")
+		local caliberWidth = surface.GetTextSize(caliber)
+		local dotWidth = surface.GetTextSize("•")
+
+		local spacing = 8
+		local totalWidth = weaponNameWidth + spacing + dotWidth + spacing + caliberWidth
+		local startX = weaponInfoCenterX - (totalWidth / 2)
+
+		draw.SimpleText(weaponName, "M9KR_WeaponName", startX, weaponInfoY,
+			white, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
+
+		draw.SimpleText("•", "M9KR_Caliber", startX + weaponNameWidth + spacing, weaponInfoY,
+			white, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
+
+		draw.SimpleText(caliber, "M9KR_Caliber", startX + weaponNameWidth + spacing + dotWidth + spacing, weaponInfoY,
+			whiteFaded, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
+
+		-- 4. Magazine capacity with color transition
+		local magFrac = math.Clamp(displayClip / maxClip, 0, 1)
+		local magColor = Color(
+			255,
+			Lerp(magFrac, 100, 255),
+			Lerp(magFrac, 130, 255),
+			alpha
+		)
+
+		draw.SimpleText(displayClip, "M9KR_AmmoLarge", magazineX, magazineY,
+			magColor, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+
+		-- 5. "+1" chamber indicator (if chambered)
+		if isChambered then
+			draw.SimpleText("+1", "M9KR_AmmoSmall", magazineX + chamberOffsetX, chamberY,
+				Color(100, 255, 100, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
+		end
+
+		-- 6. Dot separator between magazine and reserves
+		draw.SimpleText("•", "M9KR_Caliber", dotSeparatorX, dotSeparatorY,
+			white, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+
+		-- 7. Reserve ammo
+		draw.SimpleText(reserve, "M9KR_Reserve", reserveX, reserveY,
+			whiteFaded, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
 	end
 
-	-- Draw HUD elements
-
-	-- 1. Fire mode (centered)
-	draw.SimpleText(fireMode, "M9KR_FireMode", fireModeX, fireModeY,
-		fireModeColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
-
-	-- 2. Weapon name and caliber (centered as combined unit with dot separator)
-	-- Calculate text widths for proper centering
-	surface.SetFont("M9KR_WeaponName")
-	local weaponNameWidth = surface.GetTextSize(weaponName)
-	surface.SetFont("M9KR_Caliber")
-	local caliberWidth = surface.GetTextSize(caliber)
-	local dotWidth = surface.GetTextSize("•")
-
-	-- Total width including spacing and dot
-	local spacing = 8  -- Space on each side of the dot
-	local totalWidth = weaponNameWidth + spacing + dotWidth + spacing + caliberWidth
-
-	-- Calculate starting position (center the entire block)
-	local startX = weaponInfoCenterX - (totalWidth / 2)
-
-	-- Draw weapon name (white)
-	draw.SimpleText(weaponName, "M9KR_WeaponName", startX, weaponInfoY,
-		white, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
-
-	-- Draw dot separator (white, centered)
-	draw.SimpleText("•", "M9KR_Caliber", startX + weaponNameWidth + spacing, weaponInfoY,
-		white, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
-
-	-- Draw caliber (faded white)
-	draw.SimpleText(caliber, "M9KR_Caliber", startX + weaponNameWidth + spacing + dotWidth + spacing, weaponInfoY,
-		whiteFaded, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
-
-	-- 4. Magazine capacity with subtle color transition
-	-- Calculate magazine fraction (how full it is)
-	local magFrac = math.Clamp(displayClip / maxClip, 0, 1)
-
-	-- Subtle transition from white (full) to safety red (empty)
-	-- Uses the same red as safety fire mode: Color(255, 100, 130)
-	local magColor = Color(
-		255,  -- Red stays at 255
-		Lerp(magFrac, 100, 255),  -- Green: 100 (empty) -> 255 (full)
-		Lerp(magFrac, 130, 255),  -- Blue: 130 (empty) -> 255 (full)
-		alpha
-	)
-
-	draw.SimpleText(displayClip, "M9KR_AmmoLarge", magazineX, magazineY,
-		magColor, TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-
-	-- 5. "+1" chamber indicator (if chambered)
-	if isChambered then
-		draw.SimpleText("+1", "M9KR_AmmoSmall", magazineX + chamberOffsetX, chamberY,
-			Color(100, 255, 100, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
-	end
-
-	-- 6. Dot separator between magazine and reserves
-	draw.SimpleText("•", "M9KR_Caliber", dotSeparatorX, dotSeparatorY,
-		white, TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
-
-	-- 7. Reserve ammo (left-aligned so magazine capacity doesn't move when reserves change)
-	draw.SimpleText(reserve, "M9KR_Reserve", reserveX, reserveY,
-		whiteFaded, TEXT_ALIGN_LEFT, TEXT_ALIGN_BOTTOM)
-
-	-- 8-9. Health & Armor (modes 3 and 4 only)
-	if hudMode == 3 or hudMode == 4 then
+	-- Health & Armor HUD
+	if drawHealth then
 		-- 8. Health (bottom-left corner, matching ammo styling)
 		local health = ply:Health()
 		local maxHealth = ply:GetMaxHealth()
@@ -486,8 +490,8 @@ hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
 		end
 	end
 
-	-- 10. Squad Following Indicator (modes 2 and 4 only)
-	if hudMode == 2 or hudMode == 4 then
+	-- Squad Following Indicator
+	if drawSquad then
 		-- Get squad data from networked variable (set by server-side tracker)
 		local squadDataJSON = ply:GetNWString("M9KR_SquadData", "")
 		local squadCount = ply:GetNWInt("M9KR_SquadCount", 0)
@@ -587,8 +591,8 @@ end)
 	Track player activity to reset fade timer
 ]]--
 hook.Add("Think", "M9KR_HUD_ActivityTracker", function()
-	-- Only track if custom HUD is enabled
-	if GetConVar("m9kr_hud_mode"):GetInt() == 0 then return end
+	-- Only track if server enables any custom HUD element
+	if m9kr_hud_mode:GetInt() == 0 then return end
 
 	local ply = LocalPlayer()
 	if not IsValid(ply) then return end
@@ -616,7 +620,7 @@ hook.Add("Think", "M9KR_HUD_ActivityTracker", function()
 	end
 end)
 
--- HUDShouldDraw logic moved to SWEP:HUDShouldDraw in carby_gun_base/cl_init.lua
--- This avoids running the hook every frame for every HUD element when non-M9K weapons are active
+-- Default HUD hiding handled by SWEP:HUDShouldDraw in carby_gun_base/cl_init.lua
+-- Uses same bitfield + client ConVar checks to stay in sync with what's drawn here
 
 print("[M9K:R] HUD system loaded")
