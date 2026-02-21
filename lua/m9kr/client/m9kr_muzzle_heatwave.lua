@@ -4,16 +4,18 @@
 	Centralized heatwave distortion control for all muzzle flashes:
 	- 3 levels: 0 = Disabled, 1 = Full (100%), 2 = Reduced (50%)
 	- Applies to all weapon types
-	- Called from muzzleflash effect files
+	- Called from muzzleflash and bullet impact effect files
 ]]--
 
+M9KR = M9KR or {}
+
 -- ConVar created server-side in m9kr_autoload.lua (server-controlled, replicated to clients)
-M9KR_MuzzleHeatwave = GetConVar("m9kr_muzzle_heatwave")
+local heatwaveCvar = GetConVar("m9kr_muzzle_heatwave")
 
 --[[
 	Helper function: Spawn heatwave particle
-	Called from muzzleflash effect Init() functions
-	
+	Called from muzzleflash and bullet impact effect Init() functions
+
 	Parameters:
 		emitter - ParticleEmitter instance
 		position - Vector position to spawn heatwave
@@ -21,35 +23,35 @@ M9KR_MuzzleHeatwave = GetConVar("m9kr_muzzle_heatwave")
 		heatSize - Base size multiplier (from effect)
 		life - Lifetime of particle (from effect)
 ]]--
-function M9KR_SpawnHeatwave(emitter, position, direction, heatSize, life)
+function M9KR.SpawnHeatwave(emitter, position, direction, heatSize, life)
 	if not emitter then return end
 	if not position then return end
 	if not direction then return end
-	
-	local heatLevel = M9KR_MuzzleHeatwave:GetInt()
+
+	local heatLevel = heatwaveCvar:GetInt()
 	if heatLevel == 0 then return end  -- Disabled
-	
+
 	-- Base values
 	local baseHeatSize = heatSize or 0.80
 	local baseLife = life or 0.085
-	
+
 	-- Adjust for reduction level
 	local sizeMultiplier = 1.0
 	local lifeMultiplier = 1.0
 	local alphaMultiplier = 1.0
-	
+
 	if heatLevel == 2 then  -- 50% reduced
 		sizeMultiplier = 0.5
 		lifeMultiplier = 0.5
 		alphaMultiplier = 0.5
 	end
-	
+
 	local adjustedHeatSize = baseHeatSize * sizeMultiplier
 	local adjustedLife = baseLife * lifeMultiplier
-	
+
 	-- Spawn heatwave particle
 	local particle = emitter:Add("sprites/heatwave", position + direction * 2)
-	
+
 	if particle then
 		particle:SetVelocity(direction * 25 * adjustedHeatSize + 1.05 * Vector())
 		particle:SetLifeTime(0)
@@ -66,4 +68,4 @@ function M9KR_SpawnHeatwave(emitter, position, direction, heatSize, life)
 	end
 end
 
-print("[M9K:R] Muzzle heatwave system loaded (m9kr_muzzle_heatwave)")
+print("[M9K:R] Muzzle heatwave system loaded")

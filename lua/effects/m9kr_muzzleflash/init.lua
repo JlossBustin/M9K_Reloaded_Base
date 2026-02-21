@@ -245,27 +245,10 @@ function EFFECT:Init(data)
 		end
 	end
 
-	-- Heatwave effect (from TFA Realistic 2.0)
-	if TFA and TFA.GetGasEnabled and TFA.GetGasEnabled() then
+	-- Heatwave distortion (controlled by m9kr_muzzle_heatwave ConVar)
+	if M9KR and M9KR.SpawnHeatwave then
 		local emitter = ParticleEmitter(self.vOffset)
-		local AddVel = Vector()
-		local particle = emitter:Add("sprites/heatwave", self.vOffset + dir*2)
-
-		if (particle) then
-			particle:SetVelocity(dir * 25 * cfg.heat + 1.05 * AddVel)
-			particle:SetLifeTime(0)
-			particle:SetDieTime(cfg.life)
-			particle:SetStartAlpha(math.Rand(200, 225))
-			particle:SetEndAlpha(0)
-			particle:SetStartSize(math.Rand(3, 5) * cfg.heat)
-			particle:SetEndSize(math.Rand(8, 12) * cfg.heat)
-			particle:SetRoll(math.Rand(0, 360))
-			particle:SetRollDelta(math.Rand(-2, 2))
-			particle:SetAirResistance(5)
-			particle:SetGravity(Vector(0, 0, 40))
-			particle:SetColor(255, 255, 255)
-		end
-
+		M9KR.SpawnHeatwave(emitter, self.vOffset, dir, cfg.heat, cfg.life)
 		emitter:Finish()
 	end
 end
