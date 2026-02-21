@@ -110,215 +110,216 @@ end
 	Vanilla M9K Penetration System
 	Original penetration logic from M9K base
 ]]--
-function M9KR.Penetration.VanillaPenetration(weapon, bouncenum, attacker, tr, paininfo)
-	-- Match legacy M9K pattern: check prediction, not realm
-	if not IsFirstTimePredicted() then return false end
-	if not IsValid(weapon) then return false end
-	-- Basic sanity checks: tracedata and attacker must be present for further processing
-	if not tr or not tr.HitPos or not tr.Normal or not tr.HitNormal then return false end
-	if not IsValid(attacker) then return false end
-	if not attacker.FireBullets then return false end -- Ensure entity can fire bullets
-	if not paininfo or not paininfo.Damage or not paininfo.Force then return false end
+if SERVER then
+	function M9KR.Penetration.VanillaPenetration(weapon, bouncenum, attacker, tr, paininfo)
+		-- Match legacy M9K pattern: check prediction, not realm
+		if not IsFirstTimePredicted() then return false end
+		if not IsValid(weapon) then return false end
+		-- Basic sanity checks: tracedata and attacker must be present for further processing
+		if not tr or not tr.HitPos or not tr.Normal or not tr.HitNormal then return false end
+		if not IsValid(attacker) then return false end
+		if not attacker.FireBullets then return false end -- Ensure entity can fire bullets
+		if not paininfo or not paininfo.Damage or not paininfo.Force then return false end
 
-	-- Use old ricochet/penetration settings from weapon
-	local MaxRicochet = weapon.MaxRicochet or 0
-	local Ricochet = weapon.Ricochet or false
+		-- Use old ricochet/penetration settings from weapon
+		local MaxRicochet = weapon.MaxRicochet or 0
+		local Ricochet = weapon.Ricochet or false
 
-	-- Ricochet system
-	if Ricochet then
-		if tr.MatType == MAT_METAL or tr.MatType == MAT_CONCRETE or tr.MatType == MAT_ROCK then
-			if bouncenum > MaxRicochet then
-				return false
-			end
+		-- Ricochet system
+		if Ricochet then
+			if tr.MatType == MAT_METAL or tr.MatType == MAT_CONCRETE or tr.MatType == MAT_ROCK then
+				if bouncenum > MaxRicochet then
+					return false
+				end
 
-			-- Probability-based ricochet system (default 15% chance, ~1 in 7 shots)
-			-- This prevents screen shake spam and sticky mouse issues with high-RPM weapons
-			local ricochetChanceCvar = GetConVar("m9kr_ricochet_chance")
-			local ricochetChance = ricochetChanceCvar and ricochetChanceCvar:GetInt() or 15
-			if math.random(1, 100) > ricochetChance then
-				return false  -- Skip this ricochet
-			end
+				-- Probability-based ricochet system (default 15% chance, ~1 in 7 shots)
+				-- This prevents screen shake spam and sticky mouse issues with high-RPM weapons
+				local ricochetChanceCvar = GetConVar("m9kr_ricochet_chance")
+				local ricochetChance = ricochetChanceCvar and ricochetChanceCvar:GetInt() or 15
+				if math.random(1, 100) > ricochetChance then
+					return false  -- Skip this ricochet
+				end
 
-			-- Calculate impact angle for realistic ricochet physics
-			local DotProduct = tr.HitNormal:Dot(tr.Normal * -1)
+				-- Calculate impact angle for realistic ricochet physics
+				local DotProduct = tr.HitNormal:Dot(tr.Normal * -1)
 
-			-- Ricochet only at shallow angles (< 30° from surface = > 60° from normal)
-			-- DotProduct = 0.0 → grazing shot (0° from surface) → HIGH ricochet chance
-			-- DotProduct = 0.5 → 60° from normal (30° from surface) → threshold
-			-- DotProduct = 1.0 → perpendicular (90° from surface) → NO ricochet
-			if DotProduct > 0.5 then
-				return false  -- Too steep - won't ricochet (> 30° from surface)
-			end
+				-- Ricochet only at shallow angles (< 30° from surface = > 60° from normal)
+				-- DotProduct = 0.0 → grazing shot (0° from surface) → HIGH ricochet chance
+				-- DotProduct = 0.5 → 60° from normal (30° from surface) → threshold
+				-- DotProduct = 1.0 → perpendicular (90° from surface) → NO ricochet
+				if DotProduct > 0.5 then
+					return false  -- Too steep - won't ricochet (> 30° from surface)
+				end
 
-			-- Calculate ricochet direction
-			local RicochetDir = ((2 * tr.HitNormal * DotProduct) + tr.Normal) + (VectorRand() * 0.05)
+				-- Calculate ricochet direction
+				local RicochetDir = ((2 * tr.HitNormal * DotProduct) + tr.Normal) + (VectorRand() * 0.05)
 
-			-- Validate ricochet direction (prevent NaN/inf crashes)
-			if not isvector(RicochetDir) or RicochetDir:IsZero() or RicochetDir:Length() > 10000 then
-				return false
-			end
-			RicochetDir:Normalize()
+				-- Validate ricochet direction (prevent NaN/inf crashes)
+				if not isvector(RicochetDir) or RicochetDir:IsZero() or RicochetDir:Length() > 10000 then
+					return false
+				end
+				RicochetDir:Normalize()
 
-			-- Create ricochet visual effect (TFA-style sparks)
-			local effectdata = EffectData()
-			effectdata:SetOrigin(tr.HitPos)
-			effectdata:SetNormal(RicochetDir)
-			util.Effect("m9kr_ricochet", effectdata)
+				-- Create ricochet visual effect (TFA-style sparks)
+				local effectdata = EffectData()
+				effectdata:SetOrigin(tr.HitPos)
+				effectdata:SetNormal(RicochetDir)
+				util.Effect("m9kr_ricochet", effectdata)
 
-			-- Play whizzing sound for nearby players (screen shake removed to prevent sticky aim)
-			if SERVER then
-				CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
-			end 
+				-- Play whizzing sound for nearby players (screen shake removed to prevent sticky aim)
+				if SERVER then
+					CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+				end 
 
-			-- Ricochet bullet - ensure attacker is valid and can fire bullets
-			if not IsValid(attacker) or not attacker.FireBullets then return false end
+				-- Ricochet bullet - ensure attacker is valid and can fire bullets
+				if not IsValid(attacker) or not attacker.FireBullets then return false end
 
-			-- Use timer to prevent crashing (must execute outside bullet callback context)
-			if SERVER then
-				timer.Simple(0, function()
-					if not IsValid(attacker) then return end
-					attacker:FireBullets({
-						Attacker = attacker,
-						Damage = paininfo.Damage * 0.5,
-						Force = paininfo.Force,
-						Num = 1,
-						Src = tr.HitPos + (tr.HitNormal * 5),
-						Dir = RicochetDir,
-						HullSize = 0,
-						Spread = Vector(0, 0, 0),
-						Tracer = 0,  -- No tracers for ricochet bullets
-						TracerName = "",
-						Callback = function(cb_attacker, tracedata, dmginfo)
-							-- Match legacy M9K: check prediction in nested callbacks
-							if not IsFirstTimePredicted() then return end
-							-- Defensive checks inside callback (can be invoked async-ish)
-							if not IsValid(weapon) then return end
-							if not IsValid(cb_attacker) then return end
-							if not tracedata or not dmginfo then return end
-							-- Construct paininfo table from dmginfo object
-							local paininfo_cb = {
-								Damage = dmginfo:GetDamage(),
-								Force = dmginfo:GetDamageForce()
-							}
-							if weapon and weapon.BulletPenetrate then
-								weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+				-- Use timer to prevent crashing (must execute outside bullet callback context)
+				if SERVER then
+					timer.Simple(0, function()
+						if not IsValid(attacker) then return end
+						attacker:FireBullets({
+							Attacker = attacker,
+							Damage = paininfo.Damage * 0.5,
+							Force = paininfo.Force,
+							Num = 1,
+							Src = tr.HitPos + (tr.HitNormal * 5),
+							Dir = RicochetDir,
+							HullSize = 0,
+							Spread = Vector(0, 0, 0),
+							Tracer = 0,  -- No tracers for ricochet bullets
+							TracerName = "",
+							Callback = function(cb_attacker, tracedata, dmginfo)
+								-- Match legacy M9K: check prediction in nested callbacks
+								if not IsFirstTimePredicted() then return end
+								-- Defensive checks inside callback (can be invoked async-ish)
+								if not IsValid(weapon) then return end
+								if not IsValid(cb_attacker) then return end
+								if not tracedata or not dmginfo then return end
+								-- Construct paininfo table from dmginfo object
+								local paininfo_cb = {
+									Damage = dmginfo:GetDamage(),
+									Force = dmginfo:GetDamageForce()
+								}
+								if weapon and weapon.BulletPenetrate then
+									weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+								end
 							end
-						end
-					})
-				end)
+						})
+					end)
+				end
+
+				return true
 			end
-
-			return true
 		end
-	end
 
-	-- Simple penetration based on PenetrationDepth
-	local penDistance = weapon.PenetrationDepth or 9
-	local MaxPenetration = weapon.MaxPenetration or 3  -- Limit penetration bounces
+		-- Simple penetration based on PenetrationDepth
+		local penDistance = weapon.PenetrationDepth or 9
+		local MaxPenetration = weapon.MaxPenetration or 3  -- Limit penetration bounces
 
-	-- Check penetration bounce limit
-	if bouncenum > MaxPenetration then
-		return false
-	end
-
-	-- In FireBullets callback, tr.Normal IS the bullet direction (not surface normal!)
-	-- Surface normal is tr.HitNormal
-	local bulletDir = tr.Normal
-
-	-- Validate bullet direction (prevent NaN/inf crashes)
-	if not isvector(bulletDir) or bulletDir:IsZero() or bulletDir:Length() > 10000 then
-		return false
-	end
-
-	-- Determine exit point based on hit type
-	local exitPos
-
-	if tr.MatType == MAT_FLESH or tr.MatType == MAT_ALIENFLESH then
-		-- For NPCs/players: skip backwards trace (entities aren't solid walls)
-		-- Just offset past the entity's collision hull along bullet direction
-		exitPos = tr.HitPos + (bulletDir * 24)
-	else
-		-- Legacy M9K approach: Trace BACKWARDS from beyond the wall to entry point
-		-- This finds the exit point by reversing the trace
-		local traceFilter = {weapon}
-		if IsValid(weapon.Owner) then
-			table.insert(traceFilter, weapon.Owner)
-		end
-		local penetrationTrace = {
-			start = tr.HitPos + (bulletDir * penDistance),  -- Start far ahead
-			endpos = tr.HitPos,  -- Trace back to entry
-			filter = traceFilter,
-			mask = MASK_SHOT
-		}
-
-		local trace = util.TraceLine(penetrationTrace)
-
-		-- If trace starts in solid (wall too thick) or didn't find exit, no penetration
-		if trace.StartSolid or trace.Fraction >= 1.0 or trace.Fraction <= 0.0 then
+		-- Check penetration bounce limit
+		if bouncenum > MaxPenetration then
 			return false
 		end
 
-		exitPos = trace.HitPos
+		-- In FireBullets callback, tr.Normal IS the bullet direction (not surface normal!)
+		-- Surface normal is tr.HitNormal
+		local bulletDir = tr.Normal
 
-		-- Create penetration effect (TFA-style)
-		local ballisticsData = nil
-		if M9KR and M9KR.Ballistics and M9KR.Ballistics.GetData and weapon.ShellModel then
-			ballisticsData = M9KR.Ballistics.GetData(weapon.ShellModel)
+		-- Validate bullet direction (prevent NaN/inf crashes)
+		if not isvector(bulletDir) or bulletDir:IsZero() or bulletDir:Length() > 10000 then
+			return false
 		end
-		local penetration = ballisticsData and ballisticsData.penetration or 14
 
-		local effectdata = EffectData()
-		effectdata:SetStart(exitPos)  -- Exit point (where bullet emerges)
-		effectdata:SetOrigin(exitPos + (tr.Normal * 20))  -- Show 20 units forward (subtle tracer)
-		effectdata:SetMagnitude(penetration)  -- Pass penetration for caliber-based scaling
-		util.Effect("m9kr_penetrate", effectdata)
-	end
+		-- Determine exit point based on hit type
+		local exitPos
 
-	-- Create near-miss effects (bullet whizzing sound for nearby players)
-	if SERVER then
-		CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
-	end
+		if tr.MatType == MAT_FLESH or tr.MatType == MAT_ALIENFLESH then
+			-- For NPCs/players: skip backwards trace (entities aren't solid walls)
+			-- Just offset past the entity's collision hull along bullet direction
+			exitPos = tr.HitPos + (bulletDir * 24)
+		else
+			-- Legacy M9K approach: Trace BACKWARDS from beyond the wall to entry point
+			-- This finds the exit point by reversing the trace
+			local traceFilter = {weapon}
+			if IsValid(weapon.Owner) then
+				table.insert(traceFilter, weapon.Owner)
+			end
+			local penetrationTrace = {
+				start = tr.HitPos + (bulletDir * penDistance),  -- Start far ahead
+				endpos = tr.HitPos,  -- Trace back to entry
+				filter = traceFilter,
+				mask = MASK_SHOT
+			}
 
-	-- Fire penetrating bullet
-	-- Ensure attacker is valid and can fire bullets
-	if not IsValid(attacker) or not attacker.FireBullets then return false end
+			local trace = util.TraceLine(penetrationTrace)
 
-	-- Use timer to prevent crashing (must execute outside bullet callback context)
-	if SERVER then
-		timer.Simple(0, function()
-			if not IsValid(attacker) then return end
-			attacker:FireBullets({
-				Attacker = attacker,
-				Damage = paininfo.Damage * 0.7,
-				Force = paininfo.Force,
-				Num = 1,
-				Src = exitPos,
-				Dir = tr.Normal,  -- tr.Normal is the bullet direction in callback context
-				HullSize = 0,
-				Spread = Vector(0, 0, 0),
-				Tracer = 0,  -- No tracers for penetration bullets
-				TracerName = "",
-				Callback = function(cb_attacker, tracedata, dmginfo)
-					-- Match legacy M9K: check prediction in nested callbacks
-					if not IsFirstTimePredicted() then return end
-					if not IsValid(weapon) then return end
-					if not IsValid(cb_attacker) then return end
-					if not tracedata or not dmginfo then return end
-					local paininfo_cb = {
-						Damage = dmginfo:GetDamage(),
-						Force = dmginfo:GetDamageForce()
-					}
-					if weapon and weapon.BulletPenetrate then
-						weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+			-- If trace starts in solid (wall too thick) or didn't find exit, no penetration
+			if trace.StartSolid or trace.Fraction >= 1.0 or trace.Fraction <= 0.0 then
+				return false
+			end
+
+			exitPos = trace.HitPos
+
+			-- Create penetration effect (TFA-style)
+			local ballisticsData = nil
+			if M9KR and M9KR.Ballistics and M9KR.Ballistics.GetData and weapon.ShellModel then
+				ballisticsData = M9KR.Ballistics.GetData(weapon.ShellModel)
+			end
+			local penetration = ballisticsData and ballisticsData.penetration or 14
+
+			local effectdata = EffectData()
+			effectdata:SetStart(exitPos)  -- Exit point (where bullet emerges)
+			effectdata:SetOrigin(exitPos + (tr.Normal * 20))  -- Show 20 units forward (subtle tracer)
+			effectdata:SetMagnitude(penetration)  -- Pass penetration for caliber-based scaling
+			util.Effect("m9kr_penetrate", effectdata)
+		end
+
+		-- Create near-miss effects (bullet whizzing sound for nearby players)
+		if SERVER then
+			CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+		end
+
+		-- Fire penetrating bullet
+		-- Ensure attacker is valid and can fire bullets
+		if not IsValid(attacker) or not attacker.FireBullets then return false end
+
+		-- Use timer to prevent crashing (must execute outside bullet callback context)
+		if SERVER then
+			timer.Simple(0, function()
+				if not IsValid(attacker) then return end
+				attacker:FireBullets({
+					Attacker = attacker,
+					Damage = paininfo.Damage * 0.7,
+					Force = paininfo.Force,
+					Num = 1,
+					Src = exitPos,
+					Dir = tr.Normal,  -- tr.Normal is the bullet direction in callback context
+					HullSize = 0,
+					Spread = Vector(0, 0, 0),
+					Tracer = 0,  -- No tracers for penetration bullets
+					TracerName = "",
+					Callback = function(cb_attacker, tracedata, dmginfo)
+						-- Match legacy M9K: check prediction in nested callbacks
+						if not IsFirstTimePredicted() then return end
+						if not IsValid(weapon) then return end
+						if not IsValid(cb_attacker) then return end
+						if not tracedata or not dmginfo then return end
+						local paininfo_cb = {
+							Damage = dmginfo:GetDamage(),
+							Force = dmginfo:GetDamageForce()
+						}
+						if weapon and weapon.BulletPenetrate then
+							weapon:BulletPenetrate(bouncenum + 1, cb_attacker, tracedata, paininfo_cb)
+						end
 					end
-				end
-			})
-		end)
+				})
+			end)
+		end
+
+		return true
 	end
-
-	return true
 end
-
 --[[
 	Dynamic Penetration System
 	Ballistics-based penetration using shell model data
