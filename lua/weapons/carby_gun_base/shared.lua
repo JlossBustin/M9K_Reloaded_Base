@@ -95,44 +95,44 @@ SWEP.LowAmmoSoundThreshold = 0.33
  
 local PainMulti = 1
  
-if GetConVar("M9KDamageMultiplier") == nil then
+if GetConVar("m9kr_damage_multiplier") == nil then
 		PainMulti = 1
-		print("M9KDamageMultiplier is missing! You may have hit the lua limit! Reverting multiplier to 1.")
+		print("[M9K:R] m9kr_damage_multiplier is missing! Reverting multiplier to 1.")
 else
-		PainMulti = GetConVar("M9KDamageMultiplier"):GetFloat()
+		PainMulti = GetConVar("m9kr_damage_multiplier"):GetFloat()
 		if PainMulti < 0 then
 				PainMulti = PainMulti * -1
-				print("Your damage multiplier was in the negatives. It has been reverted to a positive number. Your damage multiplier is now "..PainMulti)
+				print("[M9K:R] Damage multiplier was negative, reverted to "..PainMulti)
 		end
 end
- 
-local function NewM9KDamageMultiplier(cvar, previous, new)
-		print("multiplier has been changed ")
-		if GetConVar("M9KDamageMultiplier") == nil then
+
+local function OnDamageMultiplierChanged(cvar, previous, new)
+		print("[M9K:R] Damage multiplier changed")
+		if GetConVar("m9kr_damage_multiplier") == nil then
 				PainMulti = 1
-				print("M9KDamageMultiplier is missing! You may have hit the lua limit! Reverting multiplier to 1, you will notice no changes.")
+				print("[M9K:R] m9kr_damage_multiplier is missing! Reverting multiplier to 1.")
 		else
-				PainMulti = GetConVar("M9KDamageMultiplier"):GetFloat()
+				PainMulti = GetConVar("m9kr_damage_multiplier"):GetFloat()
 				if PainMulti < 0 then
 						PainMulti = PainMulti * -1
-						print("Your damage multiplier was in the negatives. It has been reverted to a positive number. Your damage multiplier is now "..PainMulti)
+						print("[M9K:R] Damage multiplier was negative, reverted to "..PainMulti)
 				end
 		end
 end
-cvars.AddChangeCallback("M9KDamageMultiplier", NewM9KDamageMultiplier)
+cvars.AddChangeCallback("m9kr_damage_multiplier", OnDamageMultiplierChanged)
  
 local function NewDefClips(cvar, previous, new)
 		print("Default clip multiplier has changed. A server restart will be required for these changes to take effect.")
 end
-cvars.AddChangeCallback("M9KDefaultClip", NewDefClips)
+cvars.AddChangeCallback("m9kr_default_clip", NewDefClips)
  
-if GetConVar("M9KDefaultClip") == nil then
-		print("M9KDefaultClip is missing! You may have hit the lua limit!")
+if GetConVar("m9kr_default_clip") == nil then
+		print("[M9K:R] m9kr_default_clip is missing! You may have hit the lua limit!")
 else
-		if GetConVar("M9KDefaultClip"):GetInt() >= 0 then
-				print("M9K Weapons will now spawn with "..GetConVar("M9KDefaultClip"):GetFloat().." clips.")
+		if GetConVar("m9kr_default_clip"):GetInt() >= 0 then
+				print("[M9K:R] Weapons will now spawn with "..GetConVar("m9kr_default_clip"):GetFloat().." clips.")
 		else
-				print("Default clips will be not be modified")
+				print("[M9K:R] Default clips will not be modified")
 		end
 end
  
@@ -193,7 +193,7 @@ function SWEP:OnM9KRShotsFiredChanged(name, old, new)
 	if not IsValid(owner) or not owner:IsPlayer() then return end
 	if owner == LocalPlayer() then return end
 
-	local mfCvar = GetConVar("M9KR_MuzzleFlash")
+	local mfCvar = GetConVar("m9kr_muzzleflash")
 	if not mfCvar or not mfCvar:GetBool() then return end
 
 	local muzzleType = self.MuzzleFlashType or "rifle"
@@ -212,7 +212,7 @@ function SWEP:OnM9KRShotsFiredChanged(name, old, new)
 	fx:SetMagnitude(M9KR_MUZZLE_TYPE_IDS[muzzleType] or 4)
 	util.Effect("m9kr_muzzleflash", fx)
 
-	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
+	local smokeCvar = GetConVar("m9kr_muzzlesmoke")
 	if smokeCvar and smokeCvar:GetInt() == 1 then
 		util.Effect("m9kr_muzzlesmoke", fx)
 	end
@@ -858,7 +858,7 @@ function SWEP:M9KR_SetHoldType(holdType)
 end
 
 function SWEP:M9KR_SpawnMuzzleFlash()
-	local mfCvar = GetConVar("M9KR_MuzzleFlash")
+	local mfCvar = GetConVar("m9kr_muzzleflash")
 	if not mfCvar or not mfCvar:GetBool() then return end
 
 	local muzzleType = self.MuzzleFlashType or "rifle"
@@ -870,7 +870,7 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	self.m9kr_ActiveMuzzleType = muzzleType
 
 	local typeId = M9KR_MUZZLE_TYPE_IDS[muzzleType] or 4
-	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
+	local smokeCvar = GetConVar("m9kr_muzzlesmoke")
 	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
 
 	-- SP: dispatch effect from server with type encoded in EffectData
@@ -969,7 +969,7 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 end
 
 function SWEP:CheckWeaponsAndAmmo()
-	if SERVER and IsValid(self.Weapon) and GetConVar("M9KWeaponStrip"):GetBool() then
+	if SERVER and IsValid(self.Weapon) and GetConVar("m9kr_weapon_strip"):GetBool() then
 		if self.Weapon:Clip1() == 0 and self.Owner:GetAmmoCount(self.Weapon:GetPrimaryAmmoType()) == 0 then
 			timer.Simple(0.1, function()
 				if SERVER and IsValid(self) and IsValid(self.Owner) then
