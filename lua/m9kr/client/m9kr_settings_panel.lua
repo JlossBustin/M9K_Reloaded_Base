@@ -81,7 +81,6 @@ hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
 			end
 		end
 
-		panel:Help("")
 		panel:CheckBox("Strip empty weapons", "m9kr_weapon_strip")
 		panel:CheckBox("Unique weapon slots", "m9kr_unique_slots")
 		panel:CheckBox("Safety mode toggle (SHIFT+E+R)", "m9kr_safety_enabled")
