@@ -178,18 +178,19 @@ if SERVER then
 end
 
 -- ============================================================================
--- Server ConVar change network system (MP superadmin settings panel)
--- Clients can't RunConsoleCommand server ConVars in MP — route through net
+-- Server ConVar change command (MP superadmin settings panel)
+-- Clients can't set server ConVars directly in MP — this console command
+-- runs on the server when called by a client via RunConsoleCommand.
+-- Usage: m9kr_setcvar <convar_name> <value>
 -- ============================================================================
 
 if SERVER then
-	util.AddNetworkString("M9KR_SetServerConVar")
-
-	net.Receive("M9KR_SetServerConVar", function(len, ply)
+	concommand.Add("m9kr_setcvar", function(ply, cmd, args)
 		if not IsValid(ply) or not ply:IsSuperAdmin() then return end
+		if not args or #args < 2 then return end
 
-		local cvarName = net.ReadString()
-		local cvarValue = net.ReadString()
+		local cvarName = args[1]
+		local cvarValue = args[2]
 
 		-- Only allow m9kr_ prefixed ConVars (covers server settings + weapon blacklist)
 		if not string.StartsWith(cvarName, "m9kr_") then return end
@@ -198,7 +199,8 @@ if SERVER then
 		local cv = GetConVar(cvarName)
 		if not cv then return end
 
-		RunConsoleCommand(cvarName, cvarValue)
+		game.ConsoleCommand(cvarName .. " " .. cvarValue .. "\n")
+		print("[M9K:R] " .. ply:Nick() .. " changed " .. cvarName .. " to " .. cvarValue)
 	end)
 end
 

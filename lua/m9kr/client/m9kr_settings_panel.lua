@@ -2,12 +2,15 @@
 	M9K Reloaded - In-Game Settings Panel
 
 	Accessible via Q menu -> M9K:R Settings tab
-	Server Settings tab: superadmin only (changes sent via net message)
-	Client Settings tab: all players (uses RunConsoleCommand directly)
+	Server Settings tab: superadmin only
+	Client Settings tab: all players
 
-	In multiplayer, clients can't RunConsoleCommand for server ConVars.
-	All server ConVar changes go through "M9KR_SetServerConVar" net message,
-	validated server-side in m9kr_autoload.lua (superadmin check).
+	In multiplayer, clients can't RunConsoleCommand for server ConVars directly.
+	Server ConVar changes go through the "m9kr_setcvar" console command,
+	which is handled server-side in m9kr_autoload.lua (superadmin check).
+
+	Widgets use ConVar binding for READING replicated values (correct display),
+	and OnChange/OnValueChanged callbacks for WRITING via the server command.
 ]]--
 
 hook.Add("AddToolMenuTabs", "M9KR_SettingsTab", function()
@@ -56,28 +59,24 @@ local CAT_SHORT = {
 }
 
 -- ============================================================================
--- Net message helper: send server ConVar change to server
--- Works in both listen server (SP) and dedicated server (MP)
+-- Server ConVar change helper
+-- Sends "m9kr_setcvar <name> <value>" to the server via console command
 -- ============================================================================
 
 local function SetServerConVar(cvarName, value)
-	net.Start("M9KR_SetServerConVar")
-	net.WriteString(cvarName)
-	net.WriteString(tostring(value))
-	net.SendToServer()
+	RunConsoleCommand("m9kr_setcvar", cvarName, tostring(value))
 end
 
 -- ============================================================================
 -- Server settings widget helpers
--- DForm:CheckBox/NumSlider auto-bind to ConVars via RunConsoleCommand,
--- which fails for server ConVars on MP clients. These helpers create
--- unbound widgets that read from replicated ConVars and write via net.
+-- ConVar name is passed to widgets so they auto-read replicated values.
+-- OnChange/OnValueChanged callbacks send changes to server via m9kr_setcvar.
+-- The built-in ConVar write (RunConsoleCommand for the ConVar itself) fails
+-- silently on MP clients — this is harmless.
 -- ============================================================================
 
 local function AddServerCheckBox(panel, label, cvarName)
-	local cb = panel:CheckBox(label)
-	local cv = GetConVar(cvarName)
-	if cv then cb:SetChecked(cv:GetBool()) end
+	local cb = panel:CheckBox(label, cvarName)
 	cb.OnChange = function(self, val)
 		SetServerConVar(cvarName, val and "1" or "0")
 	end
@@ -85,9 +84,7 @@ local function AddServerCheckBox(panel, label, cvarName)
 end
 
 local function AddServerSlider(panel, label, cvarName, min, max, decimals)
-	local slider = panel:NumSlider(label, "", min, max, decimals)
-	local cv = GetConVar(cvarName)
-	if cv then slider:SetValue(cv:GetFloat()) end
+	local slider = panel:NumSlider(label, cvarName, min, max, decimals)
 	slider.OnValueChanged = function(self, val)
 		SetServerConVar(cvarName, tostring(math.Round(val, decimals)))
 	end
