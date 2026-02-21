@@ -60,52 +60,53 @@ local bulletMissSounds = {
 	Client prediction only runs for the shooter, so other players
 	would never hear nearby bullets if this ran client-side.
 ]]--
-function CreateNearMissEffects(weapon, startPos, hitPos, attacker)
-	if not IsValid(weapon) then return end
-	if not startPos or not hitPos then return end
+if SERVER then
+	function CreateNearMissEffects(weapon, startPos, hitPos, attacker)
+		if not IsValid(weapon) then return end
+		if not startPos or not hitPos then return end
 
-	-- Calculate bullet path direction and length
-	local bulletDir = hitPos - startPos
-	local bulletLength = bulletDir:Length()
-	if bulletLength < 1 then return end
-	bulletDir:Normalize()
+		-- Calculate bullet path direction and length
+		local bulletDir = hitPos - startPos
+		local bulletLength = bulletDir:Length()
+		if bulletLength < 1 then return end
+		bulletDir:Normalize()
 
-	-- Find nearby players for near-miss whizzing sounds
-	for _, ply in ipairs(player.GetAll()) do
-		if IsValid(ply) and ply ~= attacker then
-			-- Get player's center mass position (not feet)
-			local plyPos = ply:GetPos() + Vector(0, 0, 40)
+		-- Find nearby players for near-miss whizzing sounds
+		for _, ply in ipairs(player.GetAll()) do
+			if IsValid(ply) and ply ~= attacker then
+				-- Get player's center mass position (not feet)
+				local plyPos = ply:GetPos() + Vector(0, 0, 40)
 
-			-- Calculate closest point on bullet path to player
-			-- Using vector projection: closest point = start + dot(plyPos-start, dir) * dir
-			local toPlayer = plyPos - startPos
-			local projection = toPlayer:Dot(bulletDir)
+				-- Calculate closest point on bullet path to player
+				-- Using vector projection: closest point = start + dot(plyPos-start, dir) * dir
+				local toPlayer = plyPos - startPos
+				local projection = toPlayer:Dot(bulletDir)
 
-			-- Clamp projection to the actual bullet path (between start and hit)
-			projection = math.Clamp(projection, 0, bulletLength)
+				-- Clamp projection to the actual bullet path (between start and hit)
+				projection = math.Clamp(projection, 0, bulletLength)
 
-			-- Find the closest point on the bullet's path
-			local closestPoint = startPos + bulletDir * projection
+				-- Find the closest point on the bullet's path
+				local closestPoint = startPos + bulletDir * projection
 
-			-- Calculate distance from player to closest point on bullet path
-			local missDistance = plyPos:Distance(closestPoint)
+				-- Calculate distance from player to closest point on bullet path
+				local missDistance = plyPos:Distance(closestPoint)
 
-			-- Only play whizzing sound if bullet passed within 128 units of player
-			-- and the closest point is not at the very start (shooter's position)
-			if missDistance <= 128 and projection > 64 then
-				-- Play whizzing sound at a point near the player
-				if #bulletMissSounds > 0 then
-					local snd = table.Random(bulletMissSounds)
-					if snd then
-						-- Play sound at the closest point on bullet path
-						sound.Play(snd, closestPoint, 75, math.random(90, 130), 1)
+				-- Only play whizzing sound if bullet passed within 128 units of player
+				-- and the closest point is not at the very start (shooter's position)
+				if missDistance <= 128 and projection > 64 then
+					-- Play whizzing sound at a point near the player
+					if #bulletMissSounds > 0 then
+						local snd = table.Random(bulletMissSounds)
+						if snd then
+							-- Play sound at the closest point on bullet path
+							sound.Play(snd, closestPoint, 75, math.random(90, 130), 1)
+						end
 					end
 				end
 			end
 		end
 	end
-end
-
+end 
 --[[
 	Vanilla M9K Penetration System
 	Original penetration logic from M9K base

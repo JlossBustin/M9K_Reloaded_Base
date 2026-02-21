@@ -186,21 +186,62 @@ end
 
 if SERVER then
 	concommand.Add("m9kr_setcvar", function(ply, cmd, args)
-		if not IsValid(ply) or not ply:IsSuperAdmin() then return end
-		if not args or #args < 2 then return end
+		print("[M9K:R] m9kr_setcvar called by: " .. (IsValid(ply) and ply:Nick() or "CONSOLE"))
+		print("[M9K:R]   args: " .. table.concat(args or {}, ", "))
+
+		if IsValid(ply) then
+			print("[M9K:R]   IsSuperAdmin: " .. tostring(ply:IsSuperAdmin()))
+			print("[M9K:R]   UserGroup: " .. tostring(ply:GetUserGroup()))
+			if not ply:IsSuperAdmin() then
+				print("[M9K:R]   DENIED: not superadmin")
+				return
+			end
+		end
+
+		if not args or #args < 2 then
+			print("[M9K:R]   DENIED: not enough args")
+			return
+		end
 
 		local cvarName = args[1]
 		local cvarValue = args[2]
 
 		-- Only allow m9kr_ prefixed ConVars (covers server settings + weapon blacklist)
-		if not string.StartsWith(cvarName, "m9kr_") then return end
+		if not string.StartsWith(cvarName, "m9kr_") then
+			print("[M9K:R]   DENIED: not m9kr_ prefix: " .. cvarName)
+			return
+		end
 
 		-- Verify the ConVar actually exists
 		local cv = GetConVar(cvarName)
-		if not cv then return end
+		if not cv then
+			print("[M9K:R]   DENIED: ConVar not found: " .. cvarName)
+			return
+		end
 
+		print("[M9K:R]   Setting " .. cvarName .. " from " .. cv:GetString() .. " to " .. cvarValue)
 		game.ConsoleCommand(cvarName .. " " .. cvarValue .. "\n")
-		print("[M9K:R] " .. ply:Nick() .. " changed " .. cvarName .. " to " .. cvarValue)
+	end)
+
+	-- Diagnostic: print ConVar values after server starts
+	hook.Add("Initialize", "M9KR_DiagnosticDump", function()
+		print("[M9K:R] === Server ConVar Diagnostic ===")
+		local cvars = {
+			"m9kr_weapon_strip", "m9kr_unique_slots", "m9kr_safety_enabled",
+			"m9kr_bullet_impact", "m9kr_metal_impact", "m9kr_dust_impact",
+			"m9kr_ammo_detonation", "m9kr_damage_multiplier", "m9kr_default_clip",
+			"m9kr_low_ammo_threshold", "m9kr_ads_time", "m9kr_penetration_mode",
+			"m9kr_tracer_mode", "m9kr_ricochet_chance", "m9kr_hud_mode",
+		}
+		for _, name in ipairs(cvars) do
+			local cv = GetConVar(name)
+			if cv then
+				print("[M9K:R]   " .. name .. " = " .. cv:GetString())
+			else
+				print("[M9K:R]   " .. name .. " = NOT FOUND")
+			end
+		end
+		print("[M9K:R] === End Diagnostic ===")
 	end)
 end
 
