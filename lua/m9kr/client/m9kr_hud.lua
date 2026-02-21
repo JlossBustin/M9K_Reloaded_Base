@@ -24,11 +24,16 @@
 	Only active when holding an M9K weapon; default GMod HUD shows otherwise.
 ]]--
 
--- Cached ConVars
-local m9kr_hud_mode = GetConVar("m9kr_hud_mode")
-local m9kr_hud_weapon = GetConVar("m9kr_hud_weapon")
-local m9kr_hud_health = GetConVar("m9kr_hud_health")
-local m9kr_hud_squad = GetConVar("m9kr_hud_squad")
+-- Cached ConVars (lazy-init: replicated ConVars may not exist yet on MP clients)
+local m9kr_hud_mode, m9kr_hud_weapon, m9kr_hud_health, m9kr_hud_squad
+
+local function GetHUDConVars()
+	m9kr_hud_mode = m9kr_hud_mode or GetConVar("m9kr_hud_mode")
+	m9kr_hud_weapon = m9kr_hud_weapon or GetConVar("m9kr_hud_weapon")
+	m9kr_hud_health = m9kr_hud_health or GetConVar("m9kr_hud_health")
+	m9kr_hud_squad = m9kr_hud_squad or GetConVar("m9kr_hud_squad")
+	return m9kr_hud_mode ~= nil
+end
 
 -- Create custom fonts for HUD elements
 surface.CreateFont("M9KR_AmmoLarge", {
@@ -251,6 +256,7 @@ end
 ]]--
 hook.Add("HUDPaint", "M9KR_HUD_Draw", function()
 	-- Server bitfield: +1 = Weapon, +2 = Health/Armor, +4 = Squad
+	if not GetHUDConVars() then return end
 	local serverMode = m9kr_hud_mode:GetInt()
 	if serverMode == 0 then return end
 
@@ -598,6 +604,7 @@ end)
 	  - Weapon check omitted: HUDPaint already guards against non-M9K weapons
 ]]--
 hook.Add("CreateMove", "M9KR_HUD_ActivityTracker", function(cmd)
+	if not GetHUDConVars() then return end
 	if m9kr_hud_mode:GetInt() == 0 then return end
 
 	local now = CurTime()

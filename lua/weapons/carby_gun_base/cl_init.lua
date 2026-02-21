@@ -2,11 +2,16 @@
 
 include("shared.lua")
 
--- Cached ConVars for HUD (avoid GetConVar lookup every frame)
-local m9kr_hud_mode = GetConVar("m9kr_hud_mode")
-local m9kr_hud_weapon = GetConVar("m9kr_hud_weapon")
-local m9kr_hud_health = GetConVar("m9kr_hud_health")
-local m9kr_hud_squad = GetConVar("m9kr_hud_squad")
+-- Cached ConVars for HUD (lazy-init: replicated ConVars may not exist yet on MP clients)
+local m9kr_hud_mode, m9kr_hud_weapon, m9kr_hud_health, m9kr_hud_squad
+
+local function GetHUDConVars()
+	m9kr_hud_mode = m9kr_hud_mode or GetConVar("m9kr_hud_mode")
+	m9kr_hud_weapon = m9kr_hud_weapon or GetConVar("m9kr_hud_weapon")
+	m9kr_hud_health = m9kr_hud_health or GetConVar("m9kr_hud_health")
+	m9kr_hud_squad = m9kr_hud_squad or GetConVar("m9kr_hud_squad")
+	return m9kr_hud_mode ~= nil
+end
 
 -- Client-side Animation Variable Defaults
 
@@ -1350,6 +1355,7 @@ function SWEP:HUDShouldDraw(name)
 
 	-- m9kr_hud_mode is a bitfield: +1 = Weapon, +2 = Health/Armor, +4 = Squad
 	-- Only hide default elements when the server enables them AND the client wants them
+	if not GetHUDConVars() then return end
 	local serverMode = m9kr_hud_mode:GetInt()
 
 	-- Hide default ammo when server enables weapon HUD (bit 1) and client wants it
