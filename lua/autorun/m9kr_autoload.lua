@@ -73,6 +73,8 @@ if SERVER then
 		"Low ammo warning threshold as percentage of magazine (0 = disabled)", 0, 100)
 	CreateConVar("m9kr_ads_time", "0.55", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
 		"ADS transition time in seconds (lower = faster)", 0.1, 2)
+	CreateConVar("m9kr_ammo_detonation", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
+		"Ammo crates can explode when shot", 0, 1)
 end
 
 -- ============================================================================
@@ -205,5 +207,27 @@ if CLIENT then
 	include("m9kr/client/m9kr_muzzle_heatwave.lua")
 	include("m9kr/client/m9kr_settings_panel.lua")
 end
+
+-- ============================================================================
+-- DarkRP anti-pocket exploit protection
+-- Prevents players from pocketing ammo crates and projectiles for infinite ammo
+-- ============================================================================
+
+local M9KR_NO_POCKET = {
+	["m9kr_ammo_357"] = true,
+	["m9kr_ammo_ar2"] = true,
+	["m9kr_ammo_buckshot"] = true,
+	["m9kr_ammo_pistol"] = true,
+	["m9kr_ammo_smg"] = true,
+	["m9kr_ammo_sniper_rounds"] = true,
+	["m9kr_ammo_winchester"] = true,
+}
+
+hook.Add("canPocket", "M9KR_PreventPocket", function(ply, wep)
+	if not IsValid(wep) then return end
+	if M9KR_NO_POCKET[wep:GetClass()] then
+		return false
+	end
+end)
 
 print("[M9K:R] All M9K Reloaded systems loaded successfully")

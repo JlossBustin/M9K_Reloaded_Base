@@ -25,6 +25,7 @@ local SERVER_DEFAULTS = {
 	m9kr_bullet_impact = "1",
 	m9kr_metal_impact = "1",
 	m9kr_dust_impact = "1",
+	m9kr_ammo_detonation = "0",
 	m9kr_hud_mode = "7",
 }
 
@@ -87,6 +88,7 @@ hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
 		panel:CheckBox("Custom bullet impacts", "m9kr_bullet_impact")
 		panel:CheckBox("Custom metal impacts", "m9kr_metal_impact")
 		panel:CheckBox("Custom dust impacts", "m9kr_dust_impact")
+		panel:CheckBox("Ammo crate detonation", "m9kr_ammo_detonation")
 		AddSliderWithDefault(panel, "Damage Multiplier", "Damage Multiplier", "m9kr_damage_multiplier", 0.1, 10, 2, "1")
 
 		panel:Help("")
