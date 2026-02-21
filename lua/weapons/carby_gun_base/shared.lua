@@ -211,11 +211,6 @@ function SWEP:OnM9KRShotsFiredChanged(name, old, new)
 	fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
 	fx:SetMagnitude(M9KR_MUZZLE_TYPE_IDS[muzzleType] or 4)
 	util.Effect("m9kr_muzzleflash", fx)
-
-	local smokeCvar = GetConVar("m9kr_muzzlesmoke")
-	if smokeCvar and smokeCvar:GetInt() == 1 then
-		util.Effect("m9kr_muzzlesmoke", fx)
-	end
 end
 
 function SWEP:UpdateWorldModel()
@@ -870,8 +865,6 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	self.m9kr_ActiveMuzzleType = muzzleType
 
 	local typeId = M9KR_MUZZLE_TYPE_IDS[muzzleType] or 4
-	local smokeCvar = GetConVar("m9kr_muzzlesmoke")
-	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
 
 	-- SP: dispatch effect from server with type encoded in EffectData
 	if game.SinglePlayer() and SERVER then
@@ -882,7 +875,6 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 		fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
 		fx:SetMagnitude(typeId)
 		util.Effect("m9kr_muzzleflash", fx)
-		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx) end
 		return
 	end
 
@@ -895,7 +887,7 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 	-- MP CLIENT: queue deferred flash with type ID for FireAnimationEvent/PostDrawViewModel
 	if CLIENT then
 		if not IsFirstTimePredicted() then return end
-		self.m9kr_PendingMuzzleFlash = {smoke = doSmoke, time = CurTime(), typeId = typeId}
+		self.m9kr_PendingMuzzleFlash = {time = CurTime(), typeId = typeId}
 	end
 end
 
@@ -931,9 +923,6 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 			fx:SetMagnitude(pending.typeId or 4)
 
 			util.Effect("m9kr_muzzleflash", fx)
-			if pending.smoke then
-				util.Effect("m9kr_muzzlesmoke", fx)
-			end
 		end
 		return true
 	end
@@ -1633,6 +1622,9 @@ function SWEP:SafetyToggle()
 end
 
 function SWEP:SafetyOn()
+	local cv = GetConVar("m9kr_safety_enabled")
+	if cv and not cv:GetBool() then return end
+
 	if not IsValid(self.Weapon) or not IsValid(self.Owner) then return end
 	if self:GetIsOnSafe() then return end  -- Already in safety
 

@@ -55,30 +55,24 @@ if SERVER then
 		"Metal impact effects: 0 = GMod Default, 1 = M9K Custom", 0, 1)
 	CreateConVar("m9kr_dust_impact", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
 		"Dust impact effects: 0 = GMod Default, 1 = M9K Custom", 0, 1)
-	CreateConVar("m9kr_muzzle_heatwave", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
-		"Muzzle heatwave level: 0 = Disabled, 1 = Full (100%), 2 = Reduced (50%)", 0, 2)
 	CreateConVar("m9kr_hud_mode", "7", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
 		"M9K HUD elements (bitfield): +1 = Weapon, +2 = Health/Armor, +4 = Squad. 0 = HL2 default, 7 = Full M9KR HUD", 0, 7)
 
 	-- Gameplay ConVars (centralized from legacy weapon pack autoruns)
 	CreateConVar("m9kr_weapon_strip", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
 		"Strip weapons when empty (no ammo, no reserve)", 0, 1)
-	CreateConVar("m9kr_dynamic_recoil", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
-		"Enable aim-modifying recoil", 0, 1)
-	CreateConVar("m9kr_ammo_detonation", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
-		"Enable detonatable ammo crates", 0, 1)
+	CreateConVar("m9kr_safety_enabled", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
+		"Enable weapon safety toggle (SHIFT+E+R)", 0, 1)
 	CreateConVar("m9kr_damage_multiplier", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
 		"Global damage multiplier for M9KR weapons")
 	CreateConVar("m9kr_default_clip", "-1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
 		"Clip multiplier for weapon spawns (-1 = use weapon default)", -1, 100)
 	CreateConVar("m9kr_unique_slots", "1", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
 		"Give M9KR weapons unique weapon selection slots", 0, 1)
-	CreateConVar("m9kr_disable_penetration", "0", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
-		"Disable bullet penetration and ricochets", 0, 1)
-	CreateConVar("m9kr_debug", "0", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
-		"Enable M9KR debug output", 0, 1)
-	CreateConVar("m9kr_muzzlesmoke", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
-		"Enable muzzle smoke effects", 0, 1)
+	CreateConVar("m9kr_low_ammo_threshold", "33", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
+		"Low ammo warning threshold as percentage of magazine (0 = disabled)", 0, 100)
+	CreateConVar("m9kr_ads_time", "0.55", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED},
+		"ADS transition time in seconds (lower = faster)", 0.1, 2)
 end
 
 -- ============================================================================
@@ -89,15 +83,19 @@ if game.SinglePlayer() then
 	if SERVER then
 		CreateConVar("m9kr_muzzleflash", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
 			"Enable M9KR custom muzzle flash effects", 0, 1)
-		CreateConVar("m9kr_gas_effect", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
-			"Enable gas ejection effects when shooting", 0, 1)
+		CreateConVar("m9kr_muzzle_heatwave", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
+			"Muzzle heatwave: 0 = Off, 1 = Full, 2 = Reduced (50%)", 0, 2)
+		CreateConVar("m9kr_muzzlesmoke", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
+			"Muzzle particle quality: 0 = Optimized (lighter), 1 = Full (all effects)", 0, 1)
 	end
 else
 	if CLIENT then
 		CreateClientConVar("m9kr_muzzleflash", "1", true, true,
 			"Enable M9KR custom muzzle flash effects", 0, 1)
-		CreateClientConVar("m9kr_gas_effect", "1", true, true,
-			"Enable gas ejection effects when shooting", 0, 1)
+		CreateClientConVar("m9kr_muzzle_heatwave", "1", true, true,
+			"Muzzle heatwave: 0 = Off, 1 = Full, 2 = Reduced (50%)", 0, 2)
+		CreateClientConVar("m9kr_muzzlesmoke", "1", true, true,
+			"Muzzle particle quality: 0 = Optimized (lighter), 1 = Full (all effects)", 0, 1)
 	end
 end
 
@@ -130,6 +128,10 @@ M9KR.WeaponBases = {
 -- Check if a weapon is blacklisted via per-weapon _allowed ConVar.
 -- Called at the TOP of every weapon shared.lua before definitions.
 function M9KR.IsBlacklisted(swep)
+	if SERVER then
+		CreateConVar(swep.Gun .. "_allowed", "1", {FCVAR_ARCHIVE, FCVAR_REPLICATED},
+			"Allow " .. swep.Gun .. " to be used", 0, 1)
+	end
 	local allowCvar = GetConVar(swep.Gun .. "_allowed")
 	if allowCvar and not allowCvar:GetBool() then
 		swep.Base = "m9kr_blacklisted"

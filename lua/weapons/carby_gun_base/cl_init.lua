@@ -239,8 +239,9 @@ function SWEP:UpdateProgressRatios()
 	local safetyTarget = bSafe and 1 or 0
 	local crouchTarget = bCrouching and 1 or 0
 
-	-- Speeds must match IRONSIGHT_TIME
-	local IRONSIGHT_TIME = 0.55
+	-- Speeds must match IRONSIGHT_TIME (from server ConVar)
+	local adsCvar = GetConVar("m9kr_ads_time")
+	local IRONSIGHT_TIME = adsCvar and adsCvar:GetFloat() or 0.55
 	local adsTransitionSpeed = 12.5 / (IRONSIGHT_TIME / 0.3)
 	local sprintTransitionSpeed = 7.5
 	local safetyTransitionSpeed = 12.5 / ((IRONSIGHT_TIME * 0.5) / 0.3)
@@ -571,9 +572,6 @@ hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
 				fx:SetMagnitude(pending.typeId or 4)
 
 				util.Effect("m9kr_muzzleflash", fx)
-				if pending.smoke then
-					util.Effect("m9kr_muzzlesmoke", fx)
-				end
 			end
 		end
 	end
@@ -591,8 +589,7 @@ hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
 end)
 
 -- Low Ammo Warning System
-
-CreateClientConVar("m9kr_low_ammo_threshold", "33", true, false, "Low ammo warning threshold (percentage of magazine)", 0, 100)
+-- ConVar m9kr_low_ammo_threshold is created in m9kr_autoload.lua (server-replicated)
 
 local LowAmmoSoundByAmmoType = {
 	["pistol"] = "m9k_indicators/lowammo_indicator_handgun.wav",

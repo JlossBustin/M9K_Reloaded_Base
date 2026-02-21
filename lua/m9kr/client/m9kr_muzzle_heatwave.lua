@@ -2,14 +2,15 @@
 	M9K Reloaded - Muzzle Heatwave System
 
 	Centralized heatwave distortion control for all muzzle flashes:
-	- 3 levels: 0 = Disabled, 1 = Full (100%), 2 = Reduced (50%)
+	- 0 = Disabled, 1 = Full (100%), 2 = Reduced (50%)
 	- Applies to all weapon types
 	- Called from muzzleflash and bullet impact effect files
+	- ConVar is per-client (SP: server-replicated, MP: CreateClientConVar)
 ]]--
 
 M9KR = M9KR or {}
 
--- ConVar created server-side in m9kr_autoload.lua (server-controlled, replicated to clients)
+-- ConVar created in m9kr_autoload.lua (SP: replicated, MP: per-client)
 local heatwaveCvar = GetConVar("m9kr_muzzle_heatwave")
 
 --[[
@@ -29,9 +30,8 @@ function M9KR.SpawnHeatwave(emitter, position, direction, heatSize, life)
 	if not direction then return end
 
 	local heatLevel = heatwaveCvar:GetInt()
-	if heatLevel == 0 then return end  -- Disabled
+	if heatLevel == 0 then return end
 
-	-- Base values
 	local baseHeatSize = heatSize or 0.80
 	local baseLife = life or 0.085
 
