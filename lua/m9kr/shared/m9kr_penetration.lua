@@ -50,84 +50,55 @@ local bulletMissSounds = {
 }
 
 --[[
-	Calculate realistic screen shake and sound based on caliber and distance
-	Returns shake amplitude and radius
-]]--
-local function CalculateNearMissIntensity(weapon, distance)
-	-- Get ballistics data for caliber-specific intensity
-	local ballisticsData = nil
-	if M9KR and M9KR.Ballistics and M9KR.Ballistics.GetData and weapon.ShellModel then
-		ballisticsData = M9KR.Ballistics.GetData(weapon.ShellModel)
-	end
-	local basePenetration = ballisticsData and ballisticsData.penetration or 14
-
-	-- Scale intensity based on caliber (penetration is a good proxy for bullet energy)
-	-- Pistol calibers (8-12): 0.5-0.75x intensity
-	-- Rifle calibers (14-22): 1.0-1.5x intensity
-	-- Magnum/Anti-materiel (24-45): 1.5-3.0x intensity
-	local caliberMultiplier = math.Clamp(basePenetration / 14, 0.5, 3.0)
-
-	-- Distance falloff: closer = more intense
-	-- Max intensity at 64 units, falloff to 0 at 512 units
-	local distanceMultiplier = math.Clamp(1 - (distance / 512), 0, 1)
-
-	-- Calculate shake amplitude (much more subtle than vanilla)
-	local shakeAmplitude = 2 * caliberMultiplier * distanceMultiplier
-
-	-- Calculate effect radius
-	local shakeRadius = 128 * caliberMultiplier
-
-	return shakeAmplitude, shakeRadius
-end
-
---[[
 	Create near-miss effects (bullet whizzing sound only)
 	Screen shake removed to prevent sticky aim with high-RPM/burst weapons
 
 	Now checks the bullet's flight PATH, not just impact point.
 	Plays whizzing sound when bullet passes close to a player.
+
+	Must run on SERVER: server broadcasts sound.Play to all clients.
+	Client prediction only runs for the shooter, so other players
+	would never hear nearby bullets if this ran client-side.
 ]]--
 local function CreateNearMissEffects(weapon, startPos, hitPos, attacker)
-	if SERVER then
-		if not IsValid(weapon) then return end
-		if not startPos or not hitPos then return end
+	if not IsValid(weapon) then return end
+	if not startPos or not hitPos then return end
 
-		-- Calculate bullet path direction and length
-		local bulletDir = hitPos - startPos
-		local bulletLength = bulletDir:Length()
-		if bulletLength < 1 then return end
-		bulletDir:Normalize()
+	-- Calculate bullet path direction and length
+	local bulletDir = hitPos - startPos
+	local bulletLength = bulletDir:Length()
+	if bulletLength < 1 then return end
+	bulletDir:Normalize()
 
-		-- Find nearby players for near-miss whizzing sounds
-		for _, ply in ipairs(player.GetAll()) do
-			if IsValid(ply) and ply ~= attacker then
-				-- Get player's center mass position (not feet)
-				local plyPos = ply:GetPos() + Vector(0, 0, 40)
+	-- Find nearby players for near-miss whizzing sounds
+	for _, ply in ipairs(player.GetAll()) do
+		if IsValid(ply) and ply ~= attacker then
+			-- Get player's center mass position (not feet)
+			local plyPos = ply:GetPos() + Vector(0, 0, 40)
 
-				-- Calculate closest point on bullet path to player
-				-- Using vector projection: closest point = start + dot(plyPos-start, dir) * dir
-				local toPlayer = plyPos - startPos
-				local projection = toPlayer:Dot(bulletDir)
+			-- Calculate closest point on bullet path to player
+			-- Using vector projection: closest point = start + dot(plyPos-start, dir) * dir
+			local toPlayer = plyPos - startPos
+			local projection = toPlayer:Dot(bulletDir)
 
-				-- Clamp projection to the actual bullet path (between start and hit)
-				projection = math.Clamp(projection, 0, bulletLength)
+			-- Clamp projection to the actual bullet path (between start and hit)
+			projection = math.Clamp(projection, 0, bulletLength)
 
-				-- Find the closest point on the bullet's path
-				local closestPoint = startPos + bulletDir * projection
+			-- Find the closest point on the bullet's path
+			local closestPoint = startPos + bulletDir * projection
 
-				-- Calculate distance from player to closest point on bullet path
-				local missDistance = plyPos:Distance(closestPoint)
+			-- Calculate distance from player to closest point on bullet path
+			local missDistance = plyPos:Distance(closestPoint)
 
-				-- Only play whizzing sound if bullet passed within 128 units of player
-				-- and the closest point is not at the very start (shooter's position)
-				if missDistance <= 128 and projection > 64 then
-					-- Play whizzing sound at a point near the player
-					if #bulletMissSounds > 0 then
-						local snd = table.Random(bulletMissSounds)
-						if snd then
-							-- Play sound at the closest point on bullet path
-							sound.Play(snd, closestPoint, 75, math.random(90, 130), 1)
-						end
+			-- Only play whizzing sound if bullet passed within 128 units of player
+			-- and the closest point is not at the very start (shooter's position)
+			if missDistance <= 128 and projection > 64 then
+				-- Play whizzing sound at a point near the player
+				if #bulletMissSounds > 0 then
+					local snd = table.Random(bulletMissSounds)
+					if snd then
+						-- Play sound at the closest point on bullet path
+						sound.Play(snd, closestPoint, 75, math.random(90, 130), 1)
 					end
 				end
 			end
@@ -195,7 +166,9 @@ function M9KR.Penetration.VanillaPenetration(weapon, bouncenum, attacker, tr, pa
 			util.Effect("m9kr_ricochet", effectdata)
 
 			-- Play whizzing sound for nearby players (screen shake removed to prevent sticky aim)
-			CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+			if SERVER then
+				CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+			end 
 
 			-- Ricochet bullet - ensure attacker is valid and can fire bullets
 			if not IsValid(attacker) or not attacker.FireBullets then return false end
@@ -302,7 +275,9 @@ function M9KR.Penetration.VanillaPenetration(weapon, bouncenum, attacker, tr, pa
 	end
 
 	-- Create near-miss effects (bullet whizzing sound for nearby players)
-	CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+	if SERVER then
+		CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+	end
 
 	-- Fire penetrating bullet
 	-- Ensure attacker is valid and can fire bullets
@@ -437,7 +412,9 @@ function M9KR.Penetration.DynamicPenetration(weapon, bouncenum, attacker, tr, pa
 			util.Effect("m9kr_ricochet", effectdata)
 
 			-- Play whizzing sound for nearby players (screen shake removed to prevent sticky aim)
-			CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+			if SERVER then
+				CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+			end
 
 			-- Create ricochet trace
 			local traceFilter = {weapon}
@@ -574,7 +551,9 @@ function M9KR.Penetration.DynamicPenetration(weapon, bouncenum, attacker, tr, pa
 	end
 
 	-- Create near-miss effects (bullet whizzing sound for nearby players)
-	CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+	if SERVER then
+		CreateNearMissEffects(weapon, tr.StartPos, tr.HitPos, attacker)
+	end
 
 	-- Fire penetrating bullet - ensure attacker is valid and can fire
 	if not IsValid(attacker) or not attacker.FireBullets then return false end
