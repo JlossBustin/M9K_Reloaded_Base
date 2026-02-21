@@ -2,8 +2,12 @@
 	M9K Reloaded - In-Game Settings Panel
 
 	Accessible via Q menu -> M9K:R Settings tab
-	Server Settings tab: superadmin only
-	Client Settings tab: all players
+	Server Settings tab: superadmin only (changes sent via net message)
+	Client Settings tab: all players (uses RunConsoleCommand directly)
+
+	In multiplayer, clients can't RunConsoleCommand for server ConVars.
+	All server ConVar changes go through "M9KR_SetServerConVar" net message,
+	validated server-side in m9kr_autoload.lua (superadmin check).
 ]]--
 
 hook.Add("AddToolMenuTabs", "M9KR_SettingsTab", function()
@@ -51,11 +55,49 @@ local CAT_SHORT = {
 	["M9K Reloaded : Sniper Rifles"] = "Sniper",
 }
 
--- Helper: adds a slider with inline label and a named reset button
-local function AddSliderWithDefault(panel, label, name, cvar, min, max, decimals, default)
-	panel:NumSlider(label, cvar, min, max, decimals)
+-- ============================================================================
+-- Net message helper: send server ConVar change to server
+-- Works in both listen server (SP) and dedicated server (MP)
+-- ============================================================================
+
+local function SetServerConVar(cvarName, value)
+	net.Start("M9KR_SetServerConVar")
+	net.WriteString(cvarName)
+	net.WriteString(tostring(value))
+	net.SendToServer()
+end
+
+-- ============================================================================
+-- Server settings widget helpers
+-- DForm:CheckBox/NumSlider auto-bind to ConVars via RunConsoleCommand,
+-- which fails for server ConVars on MP clients. These helpers create
+-- unbound widgets that read from replicated ConVars and write via net.
+-- ============================================================================
+
+local function AddServerCheckBox(panel, label, cvarName)
+	local cb = panel:CheckBox(label)
+	local cv = GetConVar(cvarName)
+	if cv then cb:SetChecked(cv:GetBool()) end
+	cb.OnChange = function(self, val)
+		SetServerConVar(cvarName, val and "1" or "0")
+	end
+	return cb
+end
+
+local function AddServerSlider(panel, label, cvarName, min, max, decimals)
+	local slider = panel:NumSlider(label, "", min, max, decimals)
+	local cv = GetConVar(cvarName)
+	if cv then slider:SetValue(cv:GetFloat()) end
+	slider.OnValueChanged = function(self, val)
+		SetServerConVar(cvarName, tostring(math.Round(val, decimals)))
+	end
+	return slider
+end
+
+local function AddServerSliderWithDefault(panel, label, name, cvarName, min, max, decimals, default)
+	AddServerSlider(panel, label, cvarName, min, max, decimals)
 	local btn = panel:Button("Reset " .. name .. " to Default (" .. default .. ")")
-	btn.DoClick = function() RunConsoleCommand(cvar, default) end
+	btn.DoClick = function() SetServerConVar(cvarName, default) end
 end
 
 hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
@@ -77,43 +119,43 @@ hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
 		local resetBtn = panel:Button("Reset All Server Settings to Defaults")
 		resetBtn.DoClick = function()
 			for cvar, val in pairs(SERVER_DEFAULTS) do
-				RunConsoleCommand(cvar, val)
+				SetServerConVar(cvar, val)
 			end
 		end
 
-		panel:CheckBox("Strip empty weapons", "m9kr_weapon_strip")
-		panel:CheckBox("Unique weapon slots", "m9kr_unique_slots")
-		panel:CheckBox("Safety mode toggle (SHIFT+E+R)", "m9kr_safety_enabled")
-		panel:CheckBox("Custom bullet impacts", "m9kr_bullet_impact")
-		panel:CheckBox("Custom metal impacts", "m9kr_metal_impact")
-		panel:CheckBox("Custom dust impacts", "m9kr_dust_impact")
-		panel:CheckBox("Ammo crate detonation", "m9kr_ammo_detonation")
-		AddSliderWithDefault(panel, "Damage Multiplier", "Damage Multiplier", "m9kr_damage_multiplier", 0.1, 10, 2, "1")
+		AddServerCheckBox(panel, "Strip empty weapons", "m9kr_weapon_strip")
+		AddServerCheckBox(panel, "Unique weapon slots", "m9kr_unique_slots")
+		AddServerCheckBox(panel, "Safety mode toggle (SHIFT+E+R)", "m9kr_safety_enabled")
+		AddServerCheckBox(panel, "Custom bullet impacts", "m9kr_bullet_impact")
+		AddServerCheckBox(panel, "Custom metal impacts", "m9kr_metal_impact")
+		AddServerCheckBox(panel, "Custom dust impacts", "m9kr_dust_impact")
+		AddServerCheckBox(panel, "Ammo crate detonation", "m9kr_ammo_detonation")
+		AddServerSliderWithDefault(panel, "Damage Multiplier", "Damage Multiplier", "m9kr_damage_multiplier", 0.1, 10, 2, "1")
 
 		panel:Help("")
-		panel:NumSlider("Clip Multiplier*", "m9kr_default_clip", -1, 100, 0)
+		AddServerSlider(panel, "Clip Multiplier*", "m9kr_default_clip", -1, 100, 0)
 		panel:Help("* Clip Multiplier changes require map change to take effect")
 		local clipBtn = panel:Button("Reset Clip Multiplier to Default (-1)")
-		clipBtn.DoClick = function() RunConsoleCommand("m9kr_default_clip", "-1") end
+		clipBtn.DoClick = function() SetServerConVar("m9kr_default_clip", "-1") end
 
 		panel:Help("")
-		panel:NumSlider("Low Ammo Sounds", "m9kr_low_ammo_threshold", 0, 100, 0)
+		AddServerSlider(panel, "Low Ammo Sounds", "m9kr_low_ammo_threshold", 0, 100, 0)
 		panel:Help("Plays warning sounds when magazine drops below this %. 0 = off.")
 		local lowAmmoBtn = panel:Button("Reset Low Ammo Sounds to Default (33)")
-		lowAmmoBtn.DoClick = function() RunConsoleCommand("m9kr_low_ammo_threshold", "33") end
+		lowAmmoBtn.DoClick = function() SetServerConVar("m9kr_low_ammo_threshold", "33") end
 
 		panel:Help("")
-		AddSliderWithDefault(panel, "ADS Time (seconds)", "ADS Time", "m9kr_ads_time", 0.1, 2, 2, "0.55")
+		AddServerSliderWithDefault(panel, "ADS Time (seconds)", "ADS Time", "m9kr_ads_time", 0.1, 2, 2, "0.55")
 
 		panel:Help("")
 		panel:Help("Penetration (0=Off, 1=Dynamic, 2=Vanilla)")
-		panel:NumSlider("", "m9kr_penetration_mode", 0, 2, 0)
+		AddServerSlider(panel, "", "m9kr_penetration_mode", 0, 2, 0)
 		panel:Help("Tracers (0=Off, 1=Dynamic, 2=Vanilla)")
-		panel:NumSlider("", "m9kr_tracer_mode", 0, 2, 0)
-		AddSliderWithDefault(panel, "Ricochet Chance (%)", "Ricochet Chance", "m9kr_ricochet_chance", 0, 100, 0, "15")
+		AddServerSlider(panel, "", "m9kr_tracer_mode", 0, 2, 0)
+		AddServerSliderWithDefault(panel, "Ricochet Chance (%)", "Ricochet Chance", "m9kr_ricochet_chance", 0, 100, 0, "15")
 
 		panel:Help("")
-		panel:NumSlider("HUD Mode", "m9kr_hud_mode", 0, 7, 0)
+		AddServerSlider(panel, "HUD Mode", "m9kr_hud_mode", 0, 7, 0)
 		panel:Help("Controls which M9K:R HUD elements are enabled server-wide:")
 		panel:Help("  0 = All disabled (HL2 default HUD)")
 		panel:Help("  1 = Weapon HUD only")
@@ -127,6 +169,7 @@ hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
 
 	-- ================================================================
 	-- Client Settings (all players)
+	-- These are client ConVars, so RunConsoleCommand works directly
 	-- ================================================================
 	spawnmenu.AddToolMenuOption("M9KR", "Settings", "m9kr_client_settings",
 		"Client Settings", "", "", function(panel)
@@ -303,7 +346,7 @@ hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
 					removeBtn:SetWide(70)
 					removeBtn.DoClick = function()
 						blacklistedSet[wep.class] = nil
-						RunConsoleCommand(wep.class .. "_allowed", "1")
+						SetServerConVar(wep.class .. "_allowed", "1")
 						RebuildBlacklist()
 						RefreshWeaponDropdown()
 					end
@@ -322,7 +365,7 @@ hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
 			local _, data = wepBox:GetSelected()
 			if data then
 				blacklistedSet[data] = true
-				RunConsoleCommand(data .. "_allowed", "0")
+				SetServerConVar(data .. "_allowed", "0")
 				RebuildBlacklist()
 				RefreshWeaponDropdown()
 			end
@@ -332,7 +375,7 @@ hook.Add("PopulateToolMenu", "M9KR_SettingsPanel", function()
 			for class, _ in pairs(allWeapons) do
 				if blacklistedSet[class] then
 					blacklistedSet[class] = nil
-					RunConsoleCommand(class .. "_allowed", "1")
+					SetServerConVar(class .. "_allowed", "1")
 				end
 			end
 			RebuildBlacklist()

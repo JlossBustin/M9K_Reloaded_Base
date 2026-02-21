@@ -178,6 +178,31 @@ if SERVER then
 end
 
 -- ============================================================================
+-- Server ConVar change network system (MP superadmin settings panel)
+-- Clients can't RunConsoleCommand server ConVars in MP — route through net
+-- ============================================================================
+
+if SERVER then
+	util.AddNetworkString("M9KR_SetServerConVar")
+
+	net.Receive("M9KR_SetServerConVar", function(len, ply)
+		if not IsValid(ply) or not ply:IsSuperAdmin() then return end
+
+		local cvarName = net.ReadString()
+		local cvarValue = net.ReadString()
+
+		-- Only allow m9kr_ prefixed ConVars (covers server settings + weapon blacklist)
+		if not string.StartsWith(cvarName, "m9kr_") then return end
+
+		-- Verify the ConVar actually exists
+		local cv = GetConVar(cvarName)
+		if not cv then return end
+
+		RunConsoleCommand(cvarName, cvarValue)
+	end)
+end
+
+-- ============================================================================
 -- Shared systems (both SERVER and CLIENT)
 -- Ballistics MUST load first — tracers and penetration depend on it
 -- ============================================================================
