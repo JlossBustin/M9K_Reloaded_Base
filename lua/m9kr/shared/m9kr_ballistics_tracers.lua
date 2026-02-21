@@ -47,82 +47,82 @@ M9KR.Tracers.Database = {
 	-- ========== PISTOL CALIBERS (1:5 ratio) ==========
 
 	-- Russian/Soviet Pistol Calibers - Green tracers
-	["models/shells/9x18mm.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {100, 255, 120}, tracerWidth = 2.5},  -- 9x18mm Makarov (Russian) - bright green
+	["models/shells/9x18mm.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(100, 255, 120), tracerWidth = 2.5},  -- 9x18mm Makarov (Russian) - bright green
 
 	-- NATO/Western Pistol Calibers - Red tracers
-	["models/shells/9x19mm.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {255, 80, 80}, tracerWidth = 2.5},   -- 9x19mm Parabellum (NATO) - red
-	["models/shells/45acp.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {255, 90, 70}, tracerWidth = 2.5},    -- .45 ACP (US) - red-orange
-	["models/shells/5_7x28mm.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {255, 100, 100}, tracerWidth = 2}, -- 5.7x28mm (NATO) - bright red
+	["models/shells/9x19mm.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(255, 80, 80), tracerWidth = 2.5},   -- 9x19mm Parabellum (NATO) - red
+	["models/shells/45acp.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(255, 90, 70), tracerWidth = 2.5},    -- .45 ACP (US) - red-orange
+	["models/shells/5_7x28mm.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(255, 100, 100), tracerWidth = 2}, -- 5.7x28mm (NATO) - bright red
 
-	[".38 Special"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {255, 100, 80}, tracerWidth = 2.5},                   -- .38 Special (Colt Official Police) - red
-	[".455 Webley"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {240, 240, 220}, tracerWidth = 2.5},               -- .455 Webley (Webley MKVI) - white (British)
+	[".38 Special"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(255, 100, 80), tracerWidth = 2.5},                   -- .38 Special (Colt Official Police) - red
+	[".455 Webley"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(240, 240, 220), tracerWidth = 2.5},               -- .455 Webley (Webley MKVI) - white (British)
 
 	-- Magnum Pistol Calibers - Red with orange tint (higher power)
-	["models/shells/357mag.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 120, 60}, tracerWidth = 3},    -- .357 Magnum - red-orange
-	[".44 Magnum"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 115, 55}, tracerWidth = 3},                 -- .44 Magnum (S&W M29) - red-orange
-	["models/shells/50ae.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 110, 50}, tracerWidth = 3.5},    -- .50 AE (Desert Eagle) - intense red-orange
-	["models/shells/454casull.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 100, 40}, tracerWidth = 3.5}, -- .454 Casull - very intense red-orange
-	[".500 S&W Magnum"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 95, 35}, tracerWidth = 3.5},           -- .500 S&W Magnum (S&W M500) - intense red-orange
+	["models/shells/357mag.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 120, 60), tracerWidth = 3},    -- .357 Magnum - red-orange
+	[".44 Magnum"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 115, 55), tracerWidth = 3},                 -- .44 Magnum (S&W M29) - red-orange
+	["models/shells/50ae.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 110, 50), tracerWidth = 3.5},    -- .50 AE (Desert Eagle) - intense red-orange
+	["models/shells/454casull.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 100, 40), tracerWidth = 3.5}, -- .454 Casull - very intense red-orange
+	[".500 S&W Magnum"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 95, 35), tracerWidth = 3.5},           -- .500 S&W Magnum (S&W M500) - intense red-orange
 
 	-- ========== INTERMEDIATE RIFLE CALIBERS (1:4 ratio) ==========
 
 	-- Russian/Soviet Rifle Calibers - Green tracers
-	["models/shells/5_45x39mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {120, 255, 100}, tracerWidth = 3},    -- 5.45x39mm (AK-74, Russian) - green
-	["models/shells/7_62x39mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {100, 255, 80}, tracerWidth = 3.5},    -- 7.62x39mm (AK-47, Russian/Chinese) - bright green
-	["models/shells/7_62x39mm_live.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {100, 255, 80}, tracerWidth = 3.5}, -- 7.62x39mm (alternate model) - bright green
-	["models/shells/9x39mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {80, 255, 100}, tracerWidth = 3.5},       -- 9x39mm (VSS/VAL, Russian subsonic) - green
+	["models/shells/5_45x39mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(120, 255, 100), tracerWidth = 3},    -- 5.45x39mm (AK-74, Russian) - green
+	["models/shells/7_62x39mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(100, 255, 80), tracerWidth = 3.5},    -- 7.62x39mm (AK-47, Russian/Chinese) - bright green
+	["models/shells/7_62x39mm_live.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(100, 255, 80), tracerWidth = 3.5}, -- 7.62x39mm (alternate model) - bright green
+	["models/shells/9x39mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(80, 255, 100), tracerWidth = 3.5},       -- 9x39mm (VSS/VAL, Russian subsonic) - green
 
 	-- NATO/Western Rifle Calibers - Red tracers
-	["models/shells/5_56x45mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 90, 80}, tracerWidth = 3},  -- 5.56x45mm NATO (M16/M4/SCAR-L) - red
-	["6.8mm Caseless"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 120, 50}, tracerWidth = 3.5},            -- 6.8mm Caseless (MR-C, futuristic) - orange-red
-	["10x24mm Caseless"] = {tracerFrequency = 3, tracerType = 0, tracerColor = {255, 180, 60}, tracerWidth = 3.5},         -- 10x24mm Caseless (M41A Pulse Rifle) - bright orange-yellow
-	["Kinetic Slug"] = {tracerFrequency = 2, tracerType = 1, tracerColor = {210, 230, 255}, tracerWidth = 5},              -- Kinetic Slug (EMSSS-12, electromagnetic) - near-white blue
-	["models/shells/300blk.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 100, 70}, tracerWidth = 3.5}, -- .300 Blackout (AR-15 platform) - red-orange
+	["models/shells/5_56x45mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 90, 80), tracerWidth = 3},  -- 5.56x45mm NATO (M16/M4/SCAR-L) - red
+	["6.8mm Caseless"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 120, 50), tracerWidth = 3.5},            -- 6.8mm Caseless (MR-C, futuristic) - orange-red
+	["10x24mm Caseless"] = {tracerFrequency = 3, tracerType = 0, tracerColor = Color(255, 180, 60), tracerWidth = 3.5},         -- 10x24mm Caseless (M41A Pulse Rifle) - bright orange-yellow
+	["Kinetic Slug"] = {tracerFrequency = 2, tracerType = 1, tracerColor = Color(210, 230, 255), tracerWidth = 5},              -- Kinetic Slug (EMSSS-12, electromagnetic) - near-white blue
+	["models/shells/300blk.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 100, 70), tracerWidth = 3.5}, -- .300 Blackout (AR-15 platform) - red-orange
 
 	-- ========== LARGE-BORE INTERMEDIATE CALIBERS (1:4 ratio) ==========
 
 	-- Western Large-Bore Calibers - Red-orange tracers (heavy hitting)
-	["models/shells/50beowulf_shell.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 100, 70}, tracerWidth = 4},  -- .50 Beowulf (12.7x42mm) - red-orange
+	["models/shells/50beowulf_shell.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 100, 70), tracerWidth = 4},  -- .50 Beowulf (12.7x42mm) - red-orange
 
 	-- ========== FULL-POWER RIFLE CALIBERS (1:4 ratio) ==========
 
 	-- NATO/Western Battle Rifle Calibers - Red with white tint (high visibility)
-	["models/shells/7_62x51mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 100, 90}, tracerWidth = 4},   -- 7.62x51mm NATO (FAL/G3/SCAR-H) - bright red
-	["models/shells/shell_762nato.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 100, 90}, tracerWidth = 4}, -- 7.62 NATO (alternate model) - bright red
+	["models/shells/7_62x51mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 100, 90), tracerWidth = 4},   -- 7.62x51mm NATO (FAL/G3/SCAR-H) - bright red
+	["models/shells/shell_762nato.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 100, 90), tracerWidth = 4}, -- 7.62 NATO (alternate model) - bright red
 
 	-- Russian/Soviet Battle Rifle Calibers - Green with yellow tint
-	["models/shells/7_62x54mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {140, 255, 80}, tracerWidth = 4},  -- 7.62x54mmR (Mosin/SVD/PKM, Russian) - green-yellow
+	["models/shells/7_62x54mm.mdl"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(140, 255, 80), tracerWidth = 4},  -- 7.62x54mmR (Mosin/SVD/PKM, Russian) - green-yellow
 
 	-- ========== MAGNUM RIFLE CALIBERS (1:3 ratio) ==========
 
 	-- Western Magnum Rifle Calibers - Red-orange (high power)
-	["models/shells/300win.mdl"] = {tracerFrequency = 3, tracerType = 0, tracerColor = {255, 120, 60}, tracerWidth = 4.5},     -- .300 Win Mag - red-orange
-	["models/shells/338lapua.mdl"] = {tracerFrequency = 3, tracerType = 0, tracerColor = {255, 110, 50}, tracerWidth = 5},     -- .338 Lapua Magnum - intense red-orange
-	["models/shells/shell_338mag.mdl"] = {tracerFrequency = 3, tracerType = 0, tracerColor = {255, 110, 50}, tracerWidth = 5}, -- .338 Mag (alternate) - intense red-orange
+	["models/shells/300win.mdl"] = {tracerFrequency = 3, tracerType = 0, tracerColor = Color(255, 120, 60), tracerWidth = 4.5},     -- .300 Win Mag - red-orange
+	["models/shells/338lapua.mdl"] = {tracerFrequency = 3, tracerType = 0, tracerColor = Color(255, 110, 50), tracerWidth = 5},     -- .338 Lapua Magnum - intense red-orange
+	["models/shells/shell_338mag.mdl"] = {tracerFrequency = 3, tracerType = 0, tracerColor = Color(255, 110, 50), tracerWidth = 5}, -- .338 Mag (alternate) - intense red-orange
 
 	-- ========== ANTI-MATERIEL/HEAVY CALIBERS (1:2 ratio) - ICONIC PURPLE-RED ==========
 
 	-- Heavy calibers get distinctive purple-red color that lingers more on the red side
 	-- These are meant to be highly visible and intimidating
-	["models/shells/408cheytac.mdl"] = {tracerFrequency = 2, tracerType = 1, tracerColor = {255, 60, 120}, tracerWidth = 6},  -- .408 CheyTac - purple-red (magenta tint)
-	["models/shells/50bmg.mdl"] = {tracerFrequency = 2, tracerType = 1, tracerColor = {255, 50, 100}, tracerWidth = 6},       -- .50 BMG - iconic purple-red
-	["models/shells/12_7x55mm.mdl"] = {tracerFrequency = 2, tracerType = 1, tracerColor = {255, 40, 140}, tracerWidth = 6},   -- 12.7x55mm (Russian heavy) - purple-red with more purple
-	["models/shells/23mm.mdl"] = {tracerFrequency = 1, tracerType = 1, tracerColor = {255, 30, 160}, tracerWidth = 8},        -- 23mm autocannon - deep purple-red (almost magenta)
+	["models/shells/408cheytac.mdl"] = {tracerFrequency = 2, tracerType = 1, tracerColor = Color(255, 60, 120), tracerWidth = 6},  -- .408 CheyTac - purple-red (magenta tint)
+	["models/shells/50bmg.mdl"] = {tracerFrequency = 2, tracerType = 1, tracerColor = Color(255, 50, 100), tracerWidth = 6},       -- .50 BMG - iconic purple-red
+	["models/shells/12_7x55mm.mdl"] = {tracerFrequency = 2, tracerType = 1, tracerColor = Color(255, 40, 140), tracerWidth = 6},   -- 12.7x55mm (Russian heavy) - purple-red with more purple
+	["models/shells/23mm.mdl"] = {tracerFrequency = 1, tracerType = 1, tracerColor = Color(255, 30, 160), tracerWidth = 8},        -- 23mm autocannon - deep purple-red (almost magenta)
 
 	-- ========== SHOTGUN CALIBERS (1:6 ratio) ==========
 
 	-- 8-Gauge Magnum buckshot - NO tracers (buckshot rounds don't use tracers)
-	["M296 8-Gauge Magnum"] = {tracerFrequency = 9999, tracerType = 0, tracerColor = {255, 255, 180}, tracerWidth = 2},
+	["M296 8-Gauge Magnum"] = {tracerFrequency = 9999, tracerType = 0, tracerColor = Color(255, 255, 180), tracerWidth = 2},
 
 	-- Shotgun tracers - Yellow/white (uncommon, specialty loads)
-	["models/shells/12g_buck.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = {255, 255, 180}, tracerWidth = 2},     -- 12 gauge buckshot - pale yellow
-	["models/shells/12g_bucknball.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = {255, 255, 180}, tracerWidth = 2}, -- 12 gauge buck-n-ball - pale yellow
-	["models/shells/12g_slug.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {255, 240, 160}, tracerWidth = 3},      -- 12 gauge slug - brighter yellow
-	["models/shells/shell_13gauge.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = {255, 255, 180}, tracerWidth = 2}, -- 13 gauge - pale yellow
-	["models/shells/shell_38gauge.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = {255, 255, 180}, tracerWidth = 2}, -- 38 gauge - pale yellow
+	["models/shells/12g_buck.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = Color(255, 255, 180), tracerWidth = 2},     -- 12 gauge buckshot - pale yellow
+	["models/shells/12g_bucknball.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = Color(255, 255, 180), tracerWidth = 2}, -- 12 gauge buck-n-ball - pale yellow
+	["models/shells/12g_slug.mdl"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(255, 240, 160), tracerWidth = 3},      -- 12 gauge slug - brighter yellow
+	["models/shells/shell_13gauge.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = Color(255, 255, 180), tracerWidth = 2}, -- 13 gauge - pale yellow
+	["models/shells/shell_38gauge.mdl"] = {tracerFrequency = 6, tracerType = 0, tracerColor = Color(255, 255, 180), tracerWidth = 2}, -- 38 gauge - pale yellow
 
 	-- .410 Bore buckshot - NO tracers (buckshot rounds don't use tracers)
-	[".410 Bore"] = {tracerFrequency = 9999, tracerType = 0, tracerColor = {255, 255, 180}, tracerWidth = 2},
+	[".410 Bore"] = {tracerFrequency = 9999, tracerType = 0, tracerColor = Color(255, 255, 180), tracerWidth = 2},
 }
 
 --[[
@@ -132,14 +132,14 @@ M9KR.Tracers.Database = {
 ]]--
 M9KR.Tracers.VanillaFrequency = {
 	-- Standard calibers: White/orange tracers, consistent width
-	["pistol"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3},
-	["357"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3},
-	["smg1"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3},
-	["ar2"] = {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3},
-	["SniperPenetratedRound"] = {tracerFrequency = 3, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3},
-	["buckshot"] = {tracerFrequency = 6, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3},
-	["slam"] = {tracerFrequency = 5, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3},
-	["AirboatGun"] = {tracerFrequency = 2, tracerType = 1, tracerColor = {255, 220, 180}, tracerWidth = 3},
+	["pistol"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3},
+	["357"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3},
+	["smg1"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3},
+	["ar2"] = {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3},
+	["SniperPenetratedRound"] = {tracerFrequency = 3, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3},
+	["buckshot"] = {tracerFrequency = 6, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3},
+	["slam"] = {tracerFrequency = 5, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3},
+	["AirboatGun"] = {tracerFrequency = 2, tracerType = 1, tracerColor = Color(255, 220, 180), tracerWidth = 3},
 }
 
 --[[
@@ -148,7 +148,7 @@ M9KR.Tracers.VanillaFrequency = {
 ]]--
 function M9KR.Tracers.GetTracerDataFromShell(shellModel)
 	if not shellModel then
-		return {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3}
+		return {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3}
 	end
 
 	local data = M9KR.Tracers.Database[shellModel]
@@ -157,7 +157,7 @@ function M9KR.Tracers.GetTracerDataFromShell(shellModel)
 	end
 
 	-- Fallback: default rifle-like behavior
-	return {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3}
+	return {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3}
 end
 
 --[[
@@ -166,7 +166,7 @@ end
 ]]--
 function M9KR.Tracers.GetTracerDataFromAmmo(ammoType)
 	if not ammoType then
-		return {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3}
+		return {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3}
 	end
 
 	local data = M9KR.Tracers.VanillaFrequency[ammoType]
@@ -175,7 +175,7 @@ function M9KR.Tracers.GetTracerDataFromAmmo(ammoType)
 	end
 
 	-- Fallback: default rifle-like behavior
-	return {tracerFrequency = 4, tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3}
+	return {tracerFrequency = 4, tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3}
 end
 
 --[[
@@ -203,7 +203,7 @@ function M9KR.Tracers.SpawnTracerEffect(weapon, endPos, tracerData, attachment)
 
 	-- Use default values if tracerData is nil
 	if not tracerData then
-		tracerData = {tracerType = 0, tracerColor = {255, 220, 180}, tracerWidth = 3}
+		tracerData = {tracerType = 0, tracerColor = Color(255, 220, 180), tracerWidth = 3}
 	end
 
 	-- Get attachment index if not provided
@@ -222,8 +222,8 @@ function M9KR.Tracers.SpawnTracerEffect(weapon, endPos, tracerData, attachment)
 	effectData:SetAttachment(attachment)
 
 	-- Encode color into Start vector (RGB)
-	local color = tracerData.tracerColor or {255, 220, 180}
-	effectData:SetStart(Vector(color[1], color[2], color[3]))
+	local color = tracerData.tracerColor or Color(255, 220, 180)
+	effectData:SetStart(Vector(color.r, color.g, color.b))
 
 	-- Encode width into Magnitude
 	effectData:SetMagnitude(tracerData.tracerWidth or 3)

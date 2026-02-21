@@ -6,8 +6,8 @@
 	Uses M9KR.CreateSparkBurst / M9KR.CreateImpactFlash helpers
 ]]--
 
-local SPARK_COLOR = {255, 200, 100}
-local FLASH_CENTER_COLOR = {255, 255, 200}
+local SPARK_COLOR = Color(255, 200, 100)
+local FLASH_CENTER_COLOR = Color(255, 255, 200)
 
 function EFFECT:Init(data)
 	local pos = data:GetOrigin()

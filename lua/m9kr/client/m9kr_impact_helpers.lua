@@ -40,7 +40,7 @@ function M9KR.CreateSparkBurst(emitter, pos, dir, opts)
 			part:SetEndLength(0)
 			part:SetVelocityScale(true)
 			if opts.color then
-				part:SetColor(opts.color[1], opts.color[2], opts.color[3])
+				part:SetColor(opts.color.r, opts.color.g, opts.color.b)
 			end
 		end
 	end
@@ -58,7 +58,7 @@ function M9KR.CreateImpactFlash(emitter, pos, opts)
 		part:SetEndSize(0)
 		part:SetRoll(math.Rand(0, 360))
 		if opts.color then
-			part:SetColor(opts.color[1], opts.color[2], opts.color[3])
+			part:SetColor(opts.color.r, opts.color.g, opts.color.b)
 		end
 	end
 end
