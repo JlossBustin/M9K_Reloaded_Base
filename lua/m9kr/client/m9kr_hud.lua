@@ -132,7 +132,10 @@ surface.CreateFont("M9K_FireMode", {
 
 -- Idle fade tracking
 local lastActivityTime = 0
-local lastEyeAngles = Angle(0, 0, 0)
+local activityMask = bit.bor(
+	IN_ATTACK, IN_ATTACK2, IN_RELOAD, IN_FORWARD, IN_BACK,
+	IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED
+)
 local IDLE_FADE_START = 3  -- Seconds before fade starts
 local IDLE_FADE_ALPHA = 50  -- Alpha when idle (out of 255) - much more noticeable fade
 
@@ -589,34 +592,24 @@ end)
 
 --[[
 	Track player activity to reset fade timer
+	Uses SetupMove for direct CMoveData/CUserCmd access:
+	  - Single bitmask check replaces 10 individual KeyDown calls
+	  - Mouse deltas from CUserCmd replace EyeAngles comparison
+	  - Weapon check omitted: HUDPaint already guards against non-M9K weapons
 ]]--
-hook.Add("Think", "M9KR_HUD_ActivityTracker", function()
-	-- Only track if server enables any custom HUD element
+hook.Add("SetupMove", "M9KR_HUD_ActivityTracker", function(ply, mv, cmd)
 	if m9kr_hud_mode:GetInt() == 0 then return end
 
-	local ply = LocalPlayer()
-	if not IsValid(ply) then return end
+	local now = CurTime()
 
-	local weapon = ply:GetActiveWeapon()
-	if not IsValid(weapon) then return end
-
-	-- Only track for M9K weapons
-	if not weapon.Base or not M9KR.WeaponBases[weapon.Base] then
+	if bit.band(mv:GetButtons(), activityMask) ~= 0 then
+		lastActivityTime = now
 		return
 	end
 
-	-- Check for mouse movement (view angle changes)
-	local currentAngles = ply:EyeAngles()
-	if currentAngles.p ~= lastEyeAngles.p or currentAngles.y ~= lastEyeAngles.y then
-		lastActivityTime = CurTime()
-		lastEyeAngles = currentAngles
-	end
-
-	-- Reset fade timer on any key activity
-	if ply:KeyDown(IN_ATTACK) or ply:KeyDown(IN_ATTACK2) or ply:KeyDown(IN_RELOAD) or
-	   ply:KeyDown(IN_FORWARD) or ply:KeyDown(IN_BACK) or ply:KeyDown(IN_MOVELEFT) or ply:KeyDown(IN_MOVERIGHT) or
-	   ply:KeyDown(IN_JUMP) or ply:KeyDown(IN_DUCK) or ply:KeyDown(IN_SPEED) then
-		lastActivityTime = CurTime()
+	if cmd:GetMouseX() ~= 0 or cmd:GetMouseY() ~= 0 then
+		lastActivityTime = now
+		return
 	end
 end)
 
