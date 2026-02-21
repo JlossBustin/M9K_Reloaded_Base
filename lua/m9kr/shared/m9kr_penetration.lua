@@ -61,7 +61,7 @@ local bulletMissSounds = {
 	would never hear nearby bullets if this ran client-side.
 ]]--
 if SERVER then
-	function CreateNearMissEffects(weapon, startPos, hitPos, attacker)
+	function M9KR.CreateNearMissEffects(weapon, startPos, hitPos, attacker)
 		if not IsValid(weapon) then return end
 		if not startPos or not hitPos then return end
 
