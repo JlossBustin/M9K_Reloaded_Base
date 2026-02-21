@@ -66,6 +66,7 @@ if not M9KR_RELOAD_STATES then
 end
 
 function SWEP:Initialize()
+	self.m9kr_TimerID = self:EntIndex() .. "_" .. CurTime()
 	-- Base class initialization (copied from carby_gun_base to fix inheritance)
 	self.Reloadaftershoot = 0
 	self.OriginalHoldType = self.HoldType or "ar2"

@@ -568,8 +568,9 @@ hook.Add("PostDrawViewModel", "M9KR_DeferredEffects", function(vm, ply, weapon)
 
 				fx:SetNormal(muzzleDir)
 				fx:SetAttachment(weapon.MuzzleAttachment)
+				fx:SetMagnitude(pending.typeId or 4)
 
-				util.Effect(pending.name, fx)
+				util.Effect("m9kr_muzzleflash", fx)
 				if pending.smoke then
 					util.Effect("m9kr_muzzlesmoke", fx)
 				end

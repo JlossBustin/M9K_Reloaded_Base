@@ -162,6 +162,13 @@ SWEP.Offset = {
 	Scale = 1
 }
 
+-- Muzzle flash type → numeric ID mapping for EffectData transfer
+-- Must match the reverse table in effects/m9kr_muzzleflash/init.lua
+M9KR_MUZZLE_TYPE_IDS = {
+	pistol = 1, revolver = 2, smg = 3, rifle = 4, shotgun = 5,
+	shotgun_slug = 6, sniper = 7, lmg = 8, hmg = 9, silenced = 10,
+}
+
 function SWEP:SetupDataTables()
 	self:NetworkVar("Bool", 0, "IsSuppressed")
 	self:NetworkVar("Bool", 1, "IsAttachingSuppressor")
@@ -202,6 +209,7 @@ function SWEP:OnM9KRShotsFiredChanged(name, old, new)
 	fx:SetOrigin(owner:GetShootPos())
 	fx:SetNormal(owner:GetAimVector())
 	fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
+	fx:SetMagnitude(M9KR_MUZZLE_TYPE_IDS[muzzleType] or 4)
 	util.Effect("m9kr_muzzleflash", fx)
 
 	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
@@ -861,16 +869,18 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 
 	self.m9kr_ActiveMuzzleType = muzzleType
 
+	local typeId = M9KR_MUZZLE_TYPE_IDS[muzzleType] or 4
 	local smokeCvar = GetConVar("m9kr_muzzlesmoketrail")
 	local doSmoke = smokeCvar and smokeCvar:GetInt() == 1
 
-	-- SP
+	-- SP: dispatch effect from server with type encoded in EffectData
 	if game.SinglePlayer() and SERVER then
 		local fx = EffectData()
 		fx:SetEntity(self)
 		fx:SetOrigin(self.Owner:GetShootPos())
 		fx:SetNormal(self.Owner:GetAimVector())
 		fx:SetAttachment(tonumber(self.MuzzleAttachment) or 1)
+		fx:SetMagnitude(typeId)
 		util.Effect("m9kr_muzzleflash", fx)
 		if doSmoke then util.Effect("m9kr_muzzlesmoke", fx) end
 		return
@@ -882,10 +892,10 @@ function SWEP:M9KR_SpawnMuzzleFlash()
 		self:SetM9KRShotsFired(count + 1)
 	end
 
-	-- MP CLIENT: queue deferred flash
+	-- MP CLIENT: queue deferred flash with type ID for FireAnimationEvent/PostDrawViewModel
 	if CLIENT then
 		if not IsFirstTimePredicted() then return end
-		self.m9kr_PendingMuzzleFlash = {smoke = doSmoke, time = CurTime()}
+		self.m9kr_PendingMuzzleFlash = {smoke = doSmoke, time = CurTime(), typeId = typeId}
 	end
 end
 
@@ -918,6 +928,7 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 			fx:SetOrigin(pos)
 			fx:SetNormal(ang:Forward())
 			fx:SetAttachment(self.MuzzleAttachment)
+			fx:SetMagnitude(pending.typeId or 4)
 
 			util.Effect("m9kr_muzzleflash", fx)
 			if pending.smoke then

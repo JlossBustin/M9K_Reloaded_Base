@@ -3,8 +3,8 @@
 	Uses TFA Realistic Muzzleflashes 2.0 PCF particle system for optimal performance
 
 	Single parameterized effect replacing 10 separate muzzle flash files.
-	The active muzzle type is read from the weapon's m9kr_ActiveMuzzleType field,
-	which is set by M9KR_SpawnMuzzleFlash() or OnM9KRShotsFiredChanged().
+	The active muzzle type is passed via EffectData:SetMagnitude() as a numeric ID
+	(encoded by M9KR_SpawnMuzzleFlash, OnM9KRShotsFiredChanged, or FireAnimationEvent).
 
 	Each type key maps to a config with: life, heat, flash, particle names,
 	dlight brightness, and dlight size.
@@ -13,6 +13,12 @@
 ]]--
 
 local blankvec = Vector(0, 0, 0)
+
+-- Numeric ID → type name mapping (must match M9KR_MUZZLE_TYPE_IDS in gun_base/shared.lua)
+local MUZZLE_ID_TO_TYPE = {
+	[1] = "pistol", [2] = "revolver", [3] = "smg", [4] = "rifle", [5] = "shotgun",
+	[6] = "shotgun_slug", [7] = "sniper", [8] = "lmg", [9] = "hmg", [10] = "silenced",
+}
 
 -- ============================================================================
 -- Muzzle flash type configs
@@ -37,11 +43,9 @@ function EFFECT:Init(data)
 	self.Attachment = data:GetAttachment()
 	self.Dir = data:GetNormal()
 
-	-- Read muzzle type from weapon (set by M9KR_SpawnMuzzleFlash / OnM9KRShotsFiredChanged)
-	local muzzleType = "rifle"
-	if IsValid(self.WeaponEntOG) then
-		muzzleType = self.WeaponEntOG.m9kr_ActiveMuzzleType or "rifle"
-	end
+	-- Read muzzle type from EffectData magnitude (encoded as numeric ID for cross-realm transfer)
+	local typeId = math.Round(data:GetMagnitude())
+	local muzzleType = MUZZLE_ID_TO_TYPE[typeId] or "rifle"
 	local cfg = MUZZLE_CONFIGS[muzzleType] or MUZZLE_CONFIGS["rifle"]
 
 	local owent

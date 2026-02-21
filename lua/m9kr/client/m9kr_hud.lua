@@ -131,7 +131,7 @@ surface.CreateFont("M9K_FireMode", {
 
 
 -- Idle fade tracking
-local lastActivityTime = 0
+local lastActivityTime = CurTime()
 local activityMask = bit.bor(
 	IN_ATTACK, IN_ATTACK2, IN_RELOAD, IN_FORWARD, IN_BACK,
 	IN_MOVELEFT, IN_MOVERIGHT, IN_JUMP, IN_DUCK, IN_SPEED
@@ -592,17 +592,17 @@ end)
 
 --[[
 	Track player activity to reset fade timer
-	Uses SetupMove for direct CMoveData/CUserCmd access:
+	Uses CreateMove for direct CUserCmd access (fires every client tick, SP and MP):
 	  - Single bitmask check replaces 10 individual KeyDown calls
 	  - Mouse deltas from CUserCmd replace EyeAngles comparison
 	  - Weapon check omitted: HUDPaint already guards against non-M9K weapons
 ]]--
-hook.Add("SetupMove", "M9KR_HUD_ActivityTracker", function(ply, mv, cmd)
+hook.Add("CreateMove", "M9KR_HUD_ActivityTracker", function(cmd)
 	if m9kr_hud_mode:GetInt() == 0 then return end
 
 	local now = CurTime()
 
-	if bit.band(mv:GetButtons(), activityMask) ~= 0 then
+	if bit.band(cmd:GetButtons(), activityMask) ~= 0 then
 		lastActivityTime = now
 		return
 	end

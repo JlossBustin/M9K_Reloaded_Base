@@ -109,6 +109,7 @@ function SWEP:GetOptimalReticleScale()
 end
 
 function SWEP:Initialize()
+	self.m9kr_TimerID = self:EntIndex() .. "_" .. CurTime()
 	self.OriginalHoldType = self.HoldType or "ar2"
 	self:M9KR_SetHoldType(self.HoldType)
 
